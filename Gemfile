@@ -18,6 +18,8 @@ gem 'slim-rails' # generators
 gem 'jquery-rails'
 gem 'rack-google_analytics'
 
+gem 'thin'
+
 # To use ActiveModel has_secure_password
 # gem 'bcrypt-ruby', '~> 3.0.0'
 
