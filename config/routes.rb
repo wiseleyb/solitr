@@ -1,3 +1,3 @@
 Solitr::Application.routes.draw do
-  root to: "play#index"
+  root :to => "play#index"
 end
