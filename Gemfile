@@ -16,7 +16,6 @@ end
 
 gem 'slim-rails' # generators
 gem 'jquery-rails'
-gem 'rack-google_analytics'
 
 gem 'thin'
 
