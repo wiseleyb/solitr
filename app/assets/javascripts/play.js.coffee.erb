@@ -2,6 +2,8 @@
 ACCEPT_OVERRIDE = null
 DEBUG = false
 
+exports = window
+
 assert = (exp) ->
   throw 'Runtime error' unless exp
 
@@ -34,8 +36,11 @@ VERTICAL_FANNING_OFFSET = 20
 HORIZONTAL_FANNING_OFFSET = 20
 COLUMN_OFFSET = CARD_WIDTH + 20
 
-class Card
+class exports.Card
   @next_id = 0
+
+  @create: (args...) ->
+    new Card args...
 
   constructor: (@rank, @suit, @upturned) ->
     assert @rank? and @suit? and ACE <= rank <= KING and 0 <= suit <= 3 and @upturned?
@@ -60,8 +65,7 @@ class Card
     @element.css
       'z-index': z_index
 
-
-class GameState
+class exports.GameState
   constructor: (@game_manager, @deck, @turns) ->
     @canvas_div = @game_manager.canvas_div
 
@@ -272,7 +276,7 @@ class GameState
         accept = ".card_#{KING}_0, .card_#{KING}_1, .card_#{KING}_2, .card_#{KING}_3"
       make_droppable('tableau', index, accept)
 
-class GameManager
+class exports.GameManager
   constructor: (@canvas_div) ->
     @deck = _.flatten(new Card(r, s, false) for r in [ACE..KING] for s in [0..3])
     @undo_stack = []
@@ -289,7 +293,7 @@ class GameManager
       @game_state = @undo_stack.pop()
       @game_state.render()
 
-$ ->
+exports.setup_game = ->
   game_manager = new GameManager($('#solitaire_canvas'))
   game_manager.new_game(1)
   $('#undo_button').on 'click', =>
