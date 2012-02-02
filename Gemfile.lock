@@ -112,6 +112,7 @@ GEM
     uglifier (1.2.2)
       execjs (>= 0.3.0)
       multi_json (>= 1.0.2)
+    vendorer (0.1.9)
 
 PLATFORMS
   ruby
@@ -125,3 +126,4 @@ DEPENDENCIES
   slim-rails
   thin
   uglifier (>= 1.0.3)
+  vendorer

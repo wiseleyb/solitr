@@ -19,6 +19,10 @@ gem 'jquery-rails'
 
 gem 'thin'
 
+group :development do
+  gem 'vendorer'
+end
+
 # To use ActiveModel has_secure_password
 # gem 'bcrypt-ruby', '~> 3.0.0'
 
