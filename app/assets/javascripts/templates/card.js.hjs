@@ -1,0 +1,2 @@
+<div {{bindAttr class="classAttr" id="idAttr" style="styleAttr"}}>
+</div>

@@ -14,6 +14,7 @@ group :assets do
   gem 'slim'
 end
 
+gem 'ember-rails'
 gem 'slim-rails' # generators
 gem 'jquery-rails'
 
@@ -22,8 +23,6 @@ gem 'thin'
 group :development do
   gem 'vendorer'
 end
-
-gem 'evergreen', :git => 'git://github.com/joliss/evergreen.git', :require => 'evergreen/rails'
 
 # To use ActiveModel has_secure_password
 # gem 'bcrypt-ruby', '~> 3.0.0'

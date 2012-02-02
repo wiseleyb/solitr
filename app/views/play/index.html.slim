@@ -1,34 +1,4 @@
-div#solitaire_canvas
-  div.base#stock_base
-    div.base_image#redeal_image
-    div.base_image#exhausted_image
-
-  div.base#waste_base
-    div.base_image
-  - 0.upto 3 do |i|
-    div.base.foundation id="foundation_#{i}_base
-      div.base_image
-  - 0.upto 6 do |i|
-    div.base.tableau id="tableau_#{i}_base
-      div.base_image
-
-  div.dropzone#foundation_0_dropzone
-  div.dropzone#foundation_1_dropzone
-  div.dropzone#foundation_2_dropzone
-  div.dropzone#foundation_3_dropzone
-  div.dropzone#tableau_0_dropzone
-  div.dropzone#tableau_1_dropzone
-  div.dropzone#tableau_2_dropzone
-  div.dropzone#tableau_3_dropzone
-  div.dropzone#tableau_4_dropzone
-  div.dropzone#tableau_5_dropzone
-  div.dropzone#tableau_6_dropzone
-
-  div#you_win You win!<br>Let's play one more time!
-
-  div.button#new_game_button_1 New Game<br>turn one (easy)
-  div.button#new_game_button_2 New Game<br>turn three (medium)
-  div.button#undo_button Undo
+div#solitaire-canvas
 
 a href="https://github.com/joliss/solitr"
   img style="position: absolute; top: 0; right: 0; border: 0;" src="http://a248.e.akamai.net/assets.github.com/img/abad93f42020b733148435e2cd92ce15c542d320/687474703a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f677265656e5f3030373230302e706e67" alt="Fork me on GitHub"
