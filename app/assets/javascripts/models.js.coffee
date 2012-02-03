@@ -34,55 +34,36 @@ class App.Models.Card
   string: ->
     "#{@rank.letter()}#{@suit.symbol()}"
 
-class App.Models.CardCollection
-  constructor: ->
-    @cards = []
-
-  pushCard: (card) ->
-    assert card instanceof App.Models.Card
-    @cards.push(card)
-
-  popCard: ->
-    @cards.pop(card)
-
-  getLength: ->
-    @cards.length
-
-class App.Models.Stock extends App.Models.CardCollection
-class App.Models.Waste extends App.Models.CardCollection
-class App.Models.Foundation extends App.Models.CardCollection
-class App.Models.TableauPart extends App.Models.CardCollection
-
 class App.Models.Tableau
   constructor: ->
-    @downturnedCards = new App.Models.TableauPart
-    @upturnedCards = new App.Models.TableauPart
+    @downturnedCards = []
+    @upturnedCards = []
 
-  accepts: (card) ->
-    if @upturnedCards.length == 0
-      return false unless @downturnedCards.length == 0
-      card.rank.letter() == 'K'
-    else
-      lastCard = _(@upturnedCards).last()
-      lastCard.rank.nextLower() == card.rank and
-        lastCard.color != card.color
+#    accepts: (card) ->
+#      if @upturnedCards.length == 0
+#        return false unless @downturnedCards.length == 0
+#        card.rank.letter() == 'K'
+#      else
+#        lastCard = _(@upturnedCards).last()
+#        lastCard.rank.nextLower() == card.rank and
+#          lastCard.color != card.color
 
 class App.Models.GameState
   constructor: ->
     @tableaux = (new App.Models.Tableau for i in [0...7])
-    @stock = new App.Models.Stock
-    @waste = new App.Models.Waste
-    @foundations = (new App.Models.Foundation for i in [0...4])
+    @stock = []
+    @waste = []
+    @foundations = ([] for i in [0...4])
 
   deal: ->
     @deck = _(@createDeck()).shuffle()
     deckCopy = @deck.slice(0)
     for tableau, index in @tableaux
       for i in [0...index]
-        tableau.downturnedCards.pushCard(deckCopy.pop())
-      tableau.upturnedCards.pushCard(deckCopy.pop())
+        tableau.downturnedCards.push(deckCopy.pop())
+      tableau.upturnedCards.push(deckCopy.pop())
     while deckCopy.length
-      @stock.pushCard(deckCopy.pop())
+      @stock.push(deckCopy.pop())
 
   createDeck: ->
     _(new App.Models.Card(rank, suit) \

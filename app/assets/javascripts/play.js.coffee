@@ -72,20 +72,20 @@ class App.GameController
 
   animateAfterCommand: (cmd) ->
     zIndex = 0
-    for card in @gameState.stock.cards
+    for card in @gameState.stock
       @getCardController(card).setPosition @positions.stock..., zIndex++, false
-    for card in @gameState.waste.cards
+    for card in @gameState.waste
       @getCardController(card).setPosition @positions.waste..., zIndex++, true
     for foundation, index in @gameState.foundations
-      for card in foundation.cards
+      for card in foundation
         @getCardController(card).setPosition @positions.foundations[index]..., zIndex++, true
     for tableau, index in @gameState.tableaux
       [left, top] = @positions.tableaux[index]
       offset = 0
-      for card in tableau.downturnedCards.cards
+      for card in tableau.downturnedCards
         @getCardController(card).setPosition left, top + offset, zIndex++, false
         offset += @positions.fanningOffset
-      for card in tableau.upturnedCards.cards
+      for card in tableau.upturnedCards
         @getCardController(card).setPosition left, top + offset, zIndex++, true
         offset += @positions.fanningOffset
 
