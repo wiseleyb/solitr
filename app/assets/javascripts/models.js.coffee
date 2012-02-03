@@ -25,7 +25,7 @@ App.Models.Suit = Ember.Object.extend
 App.Models.ranks = (App.Models.Rank.create(value: i) for i in [0...13])
 App.Models.suits = (App.Models.Suit.create(value: i) for i in [0...4])
 
-_nextId = 1
+_nextId = 0
 
 App.Models.Card = Ember.Object.extend
   id: (->

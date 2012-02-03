@@ -2,50 +2,36 @@
 #= require models
 
 App.CardController = Ember.Object.extend
-  modelBinding: 'view.model'
-  view: null
+  model: null
 
-  idBinding: 'model.id'
-  rankBinding: 'model.rank'
-  suitBinding: 'model.suit'
-  upturnedBinding: 'view.upturned'
+  upturned: false
+
+  element: null
 
   # Eventually this should just memorize the parameters and let the visual
   # updating be handled by animation code.
   setPosition: (left, top, zIndex, upturned) ->
-    @set('upturned', upturned)
-    assert @get('view').$().length
-    @get('view').$('.card').css
+    $(@element).css
       left: "#{left}px"
       top: "#{top}px"
-    @get('view').$().css
       zIndex: zIndex
+    @setUpturned(upturned)
 
   show: ->
-    @get('view').$('.card').show()
+    $(@element).show()
 
-App.CardView = Ember.View.extend
-  templateName: 'templates/card'
-
-  model: null
-
-  idBinding: 'model.id'
-  rankBinding: 'model.rank'
-  suitBinding: 'model.suit'
-  upturned: true
-
-  idAttr: (->
-    "#{@get 'id'}"
-  ).property 'id'
-  classAttr: (->
-    "card card_#{@get 'rank'}_#{@get 'suit'}"
-  ).property 'rank', 'suit'
-  styleAttr: (->
-    if @get('upturned')
-      "background-position: -#{@rank * 79}px -#{_(['clubs', 'diamonds', 'hearts', 'spades']).indexOf(@suit) * 123}px;"
+  setUpturned: (upturned) ->
+    if upturned
+      $(@element).css backgroundPosition: "-#{@get('model').get('rank') * 79}px -#{_(['clubs', 'diamonds', 'hearts', 'spades']).indexOf(@get('model').get('suit')) * 123}px"
     else
-      "background-position: -#{2 * 79}px -#{4 * 123}px;"
-  ).property 'rank', 'suit', 'upturned'
+      $(@element).css backgroundPosition: "-#{2 * 79}px -#{4 * 123}px"
+
+  appendTo: (rootElement) ->
+    @element = document.createElement('div')
+    @element.className = 'card'
+    @element.id = @get('model').get('id')
+    @setUpturned(false)
+    $(rootElement).append($(@element))
 
 App.TableauController = Ember.Object.extend
   position: null
@@ -80,10 +66,9 @@ App.GameController = Ember.Object.extend
       foundations: (App.Models.Foundation.create() for i in [0...4])
     # Initialize card controllers
     for card in @undealtCards
-      cardView = App.CardView.create model: card
-      cardView.appendTo(App.rootElement)
       @cardControllers[card.get 'id'] = cardController = App.CardController.create
-        view: cardView
+        model: card
+      cardController.appendTo(App.rootElement)
     @deal()
     # Wait for DOM to be updated
     setTimeout (=>
@@ -146,17 +131,7 @@ App.createDeck = ->
 App.ApplicationView = Ember.View.extend
   templateName: 'templates/application'
 
-  myOneCardView: null
-
 App.setupGame = ->
   $ ->
-    v = App.CardView.create
-      controller: App.CardController.create
-        model: App.Models.Card.create
-          rank: 5
-          suit: 'diamonds'
-    #a = ApplicationView.create
-      #myOneCardView: v
-    v.appendTo(App.rootElement)
     gameController = App.GameController.create()
     gameController.initialGameState()
