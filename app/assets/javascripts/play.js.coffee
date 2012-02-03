@@ -68,7 +68,6 @@ class App.GameController
       @animateAfterCommand('deal')
       for id, cardController of @cardControllers
         cardController.show()
-      #@dealToTableau(gameState.tableaux[0])
     ), 0
 
   deal: ->

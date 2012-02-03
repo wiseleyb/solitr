@@ -14,7 +14,6 @@ group :assets do
   gem 'slim'
 end
 
-gem 'ember-rails'
 gem 'slim-rails' # generators
 gem 'jquery-rails'
 

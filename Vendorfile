@@ -1,3 +1,2 @@
 file 'vendor/assets/javascripts/jquery.js', 'http://code.jquery.com/jquery-latest.js'
 file 'vendor/assets/javascripts/underscore.js', 'http://documentcloud.github.com/underscore/underscore.js'
-file 'vendor/assets/javascripts/ember.js', 'https://github.com/downloads/emberjs/ember.js/ember-latest.js'

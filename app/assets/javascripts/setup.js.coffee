@@ -1,9 +1,6 @@
-window.App = Ember.Application.create
-  rootElement: '#solitaire-canvas'
-
-App.Models ||= {}
-App.Controllers ||= {}
-App.Views ||= {}
+window.App ?= {}
+App.rootElement = '#solitaire-canvas'
+App.Models ?= {}
 
 # Development helpers
 
