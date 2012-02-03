@@ -4,8 +4,6 @@
 App.CardController = Ember.Object.extend
   model: null
 
-  upturned: false
-
   element: null
 
   # Eventually this should just memorize the parameters and let the visual
@@ -22,14 +20,14 @@ App.CardController = Ember.Object.extend
 
   setUpturned: (upturned) ->
     if upturned
-      $(@element).css backgroundPosition: "-#{@get('model').get('rank') * 79}px -#{_(['clubs', 'diamonds', 'hearts', 'spades']).indexOf(@get('model').get('suit')) * 123}px"
+      $(@element).css backgroundPosition: "-#{@model.rank.value * 79}px -#{_(['clubs', 'diamonds', 'hearts', 'spades']).indexOf(@model.suit.string()) * 123}px"
     else
       $(@element).css backgroundPosition: "-#{2 * 79}px -#{4 * 123}px"
 
   appendTo: (rootElement) ->
     @element = document.createElement('div')
     @element.className = 'card'
-    @element.id = @get('model').get('id')
+    @element.id = @model.id
     @setUpturned(false)
     $(rootElement).append($(@element))
 
@@ -55,7 +53,7 @@ App.GameController = Ember.Object.extend
     @cardControllers = {}
 
   getCardController: (card) ->
-    @cardControllers[card.get 'id']
+    @cardControllers[card.id]
 
   initialGameState: ->
     @undealtCards = _(App.createDeck()).shuffle()
@@ -66,7 +64,7 @@ App.GameController = Ember.Object.extend
       foundations: (App.Models.Foundation.create() for i in [0...4])
     # Initialize card controllers
     for card in @undealtCards
-      @cardControllers[card.get 'id'] = cardController = App.CardController.create
+      @cardControllers[card.id] = cardController = App.CardController.create
         model: card
       cardController.appendTo(App.rootElement)
     @deal()
@@ -75,16 +73,16 @@ App.GameController = Ember.Object.extend
       @animateAfterCommand('deal')
       for id, cardController of @cardControllers
         cardController.show()
-      #@dealToTableau(gameState.get('tableaux')[0])
+      #@dealToTableau(gameState.tableaux[0])
     ), 0
 
   deal: ->
-    for tableau, index in @gameState.get('tableaux')
+    for tableau, index in @gameState.tableaux
       for i in [0...index]
         tableau.downturnedCards.pushCard(@undealtCards.pop())
       tableau.upturnedCards.pushCard(@undealtCards.pop())
     until @undealtCards.length == 0
-      @gameState.get('stock').pushCard(@undealtCards.pop())
+      @gameState.stock.pushCard(@undealtCards.pop())
 
   initializeCardController: (card) ->
 
@@ -94,39 +92,39 @@ App.GameController = Ember.Object.extend
 
   animateAfterCommand: (cmd) ->
     #assert cmd.direction == 'do'
-#      switch cmd.get('action')
+#      switch cmd.action
 #        when 'move'
-#          dest = cmd.get('dest')
-#          affectedCardControllers = _(dest.slice(-cmd.get('numberOfCards'))).map (card) =>
+#          dest = cmd.dest
+#          affectedCardControllers = _(dest.slice(-cmd.numberOfCards)).map (card) =>
 #            @getCardController(card)
 #          if cmd.
     zIndex = 0
-    for card in @gameState.get('stock').cards
+    for card in @gameState.stock.cards
       @getCardController(card).setPosition stockPosition..., zIndex++, false
-    for card in @gameState.get('waste').cards
+    for card in @gameState.waste.cards
       @getCardController(card).setPosition wastePosition..., zIndex++, true
-    for foundation, index in @gameState.get('foundations')
-      for card in foundation.get 'cards'
+    for foundation, index in @gameState.foundations
+      for card in foundation.cards
         @getCardController(card).setPosition foundationPositions[index]..., zIndex++, true
-    for tableau, index in @gameState.get('tableaux')
+    for tableau, index in @gameState.tableaux
       [left, top] = tableauPositions[index]
       offset = 0
-      for card in tableau.get('downturnedCards').get('cards')
+      for card in tableau.downturnedCards.cards
         @getCardController(card).setPosition left, top + offset, zIndex++, false
         offset += fanningOffset
-      for card in tableau.get('upturnedCards').get('cards')
+      for card in tableau.upturnedCards.cards
         @getCardController(card).setPosition left, top + offset, zIndex++, true
         offset += fanningOffset
 
 #    dealToTableau: (tableau) ->
 #      card = @undealtCards.popObject()
-#      tableau.get('downturnedCards').pushCard(card)
+#      tableau.downturnedCards.pushCard(card)
 #      #@getCardView(card)
 
 App.createDeck = ->
   _(App.Models.Card.create(rank: rank, suit: suit) \
-    for rank in App.Models.Card.ranks \
-    for suit in App.Models.Card.suits).flatten()
+    for rank in App.Models.ranks \
+    for suit in App.Models.suits).flatten()
 
 App.ApplicationView = Ember.View.extend
   templateName: 'templates/application'
