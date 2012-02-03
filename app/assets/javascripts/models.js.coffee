@@ -68,8 +68,26 @@ class App.Models.Tableau
         lastCard.color != card.color
 
 class App.Models.GameState
-  constructor: (attributes) ->
-    _(this).extend(attributes)
+  constructor: ->
+    @tableaux = (new App.Models.Tableau for i in [0...7])
+    @stock = new App.Models.Stock
+    @waste = new App.Models.Waste
+    @foundations = (new App.Models.Foundation for i in [0...4])
+
+  deal: ->
+    @deck = _(@createDeck()).shuffle()
+    deckCopy = @deck.slice(0)
+    for tableau, index in @tableaux
+      for i in [0...index]
+        tableau.downturnedCards.pushCard(deckCopy.pop())
+      tableau.upturnedCards.pushCard(deckCopy.pop())
+    while deckCopy.length
+      @stock.pushCard(deckCopy.pop())
+
+  createDeck: ->
+    _(new App.Models.Card(rank, suit) \
+      for rank in App.Models.ranks \
+      for suit in App.Models.suits).flatten()
 
   isValidCommand: (cmd) ->
     true
