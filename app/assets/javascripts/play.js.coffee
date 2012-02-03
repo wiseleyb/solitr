@@ -1,10 +1,9 @@
 #= require_self
 #= require models
 
-App.CardController = Ember.Object.extend
-  model: null
-
-  element: null
+class App.CardController
+  constructor: (@model) ->
+    @element = null
 
   # Eventually this should just memorize the parameters and let the visual
   # updating be handled by animation code.
@@ -31,9 +30,6 @@ App.CardController = Ember.Object.extend
     @setUpturned(false)
     $(rootElement).append($(@element))
 
-App.TableauController = Ember.Object.extend
-  position: null
-
 undealtCardsPosition = [0, 0]
 firstColumn = 20
 columnOffset = 100
@@ -45,10 +41,10 @@ foundationPositions = ([firstColumn + (3 + i) * columnOffset, firstRow] for i in
 tableauPositions = ([firstColumn + i * columnOffset, secondRow] for i in [0...7])
 fanningOffset = 20
 
-App.GameController = Ember.Object.extend
+class App.GameController
   gameState: null
 
-  init: ->
+  constructor: ->
     # map IDs to views
     @cardControllers = {}
 
@@ -57,15 +53,14 @@ App.GameController = Ember.Object.extend
 
   initialGameState: ->
     @undealtCards = _(App.createDeck()).shuffle()
-    @gameState = App.Models.GameState.create
-      tableaux: (App.Models.Tableau.create() for i in [0...7])
-      stock: App.Models.Stock.create()
-      waste: App.Models.Waste.create()
-      foundations: (App.Models.Foundation.create() for i in [0...4])
+    @gameState = new App.Models.GameState
+      tableaux: (new App.Models.Tableau for i in [0...7])
+      stock: new App.Models.Stock
+      waste: new App.Models.Waste
+      foundations: (new App.Models.Foundation for i in [0...4])
     # Initialize card controllers
     for card in @undealtCards
-      @cardControllers[card.id] = cardController = App.CardController.create
-        model: card
+      @cardControllers[card.id] = cardController = new App.CardController(card)
       cardController.appendTo(App.rootElement)
     @deal()
     # Wait for DOM to be updated
@@ -91,13 +86,6 @@ App.GameController = Ember.Object.extend
     @animateAfterCommand(cmd)
 
   animateAfterCommand: (cmd) ->
-    #assert cmd.direction == 'do'
-#      switch cmd.action
-#        when 'move'
-#          dest = cmd.dest
-#          affectedCardControllers = _(dest.slice(-cmd.numberOfCards)).map (card) =>
-#            @getCardController(card)
-#          if cmd.
     zIndex = 0
     for card in @gameState.stock.cards
       @getCardController(card).setPosition stockPosition..., zIndex++, false
@@ -116,20 +104,12 @@ App.GameController = Ember.Object.extend
         @getCardController(card).setPosition left, top + offset, zIndex++, true
         offset += fanningOffset
 
-#    dealToTableau: (tableau) ->
-#      card = @undealtCards.popObject()
-#      tableau.downturnedCards.pushCard(card)
-#      #@getCardView(card)
-
 App.createDeck = ->
-  _(App.Models.Card.create(rank: rank, suit: suit) \
+  _(new App.Models.Card(rank, suit) \
     for rank in App.Models.ranks \
     for suit in App.Models.suits).flatten()
 
-App.ApplicationView = Ember.View.extend
-  templateName: 'templates/application'
-
 App.setupGame = ->
   $ ->
-    gameController = App.GameController.create()
+    gameController = new App.GameController
     gameController.initialGameState()

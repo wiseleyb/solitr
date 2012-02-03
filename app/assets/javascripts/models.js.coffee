@@ -1,6 +1,6 @@
 # Immutable
-App.Models.Rank = Ember.Object.extend
-  value: null
+class App.Models.Rank
+  constructor: (@value) ->
 
   letter: ->
     'A23456789TJQK'[@value]
@@ -10,8 +10,8 @@ App.Models.Rank = Ember.Object.extend
     if value == 12 then null else App.Models.ranks[value + 1]
 
 # Immutable
-App.Models.Suit = Ember.Object.extend
-  value: null
+class App.Models.Suit
+  constructor: (@value) ->
 
   symbol: ->
     '♣♦♥♠'[@value]
@@ -22,46 +22,41 @@ App.Models.Suit = Ember.Object.extend
   color: ->
     if _(['clubs', 'spades']).includes(@string()) then 'black' else 'red'
 
-App.Models.ranks = (App.Models.Rank.create(value: i) for i in [0...13])
-App.Models.suits = (App.Models.Suit.create(value: i) for i in [0...4])
+App.Models.ranks = (new App.Models.Rank(i) for i in [0...13])
+App.Models.suits = (new App.Models.Suit(i) for i in [0...4])
 
 _nextId = 0
 
-App.Models.Card = Ember.Object.extend
-  init: ->
+class App.Models.Card
+  constructor: (@rank, @suit) ->
     @id = _nextId++
-  rank: null
-  suit: null
 
   string: ->
     "#{@rank.letter()}#{@suit.symbol()}"
 
-App.Models.CardCollection = Ember.Object.extend
-  init: ->
+class App.Models.CardCollection
+  constructor: ->
     @cards = []
 
   pushCard: (card) ->
     assert card instanceof App.Models.Card
-    @cards.pushObject(card)
+    @cards.push(card)
 
   popCard: ->
-    @cards.popObject(card)
+    @cards.pop(card)
 
   getLength: ->
     @cards.length
 
-App.Models.Stock = App.Models.CardCollection.extend()
-App.Models.Waste = App.Models.CardCollection.extend()
-App.Models.Foundation = App.Models.CardCollection.extend()
+class App.Models.Stock extends App.Models.CardCollection
+class App.Models.Waste extends App.Models.CardCollection
+class App.Models.Foundation extends App.Models.CardCollection
+class App.Models.TableauPart extends App.Models.CardCollection
 
-App.Models.TableauPart = App.Models.CardCollection.extend()
-App.Models.Tableau = Ember.Object.extend
-  downturnedCards: null
-  upturnedCards: null
-
-  init: ->
-    @downturnedCards = App.Models.TableauPart.create()
-    @upturnedCards = App.Models.TableauPart.create()
+class App.Models.Tableau
+  constructor: ->
+    @downturnedCards = new App.Models.TableauPart
+    @upturnedCards = new App.Models.TableauPart
 
   accepts: (card) ->
     if @upturnedCards.length == 0
@@ -72,15 +67,15 @@ App.Models.Tableau = Ember.Object.extend
       lastCard.rank.nextLower() == card.rank and
         lastCard.color != card.color
 
-App.Models.GameState = Ember.Object.extend
-  tableaux: null
-  stock: null
-  waste: null
-  foundations: null
+class App.Models.GameState
+  constructor: (attributes) ->
+    _(this).extend(attributes)
 
   isValidCommand: (cmd) ->
     true
+
   #constructUndoCommand:
+
   executeCommand: (cmd) ->
     assert @isValidCommand(cmd)
     assert cmd.direction == 'do', 'undo not implemented'
@@ -100,17 +95,13 @@ App.Models.GameState = Ember.Object.extend
         until stock.length == 0
           stock.push(waste.pop())
 
-  _getMoveCollection: (name) -> # 'stock' or ['tableux', 1]
+  _getMoveCollection: (name) -> # 'stock' or ['tableaux', 1]
     c = if name instanceof Array then this[name[0]][name[1]] else this[name]
     if c instanceof App.Model.Tableau
       c = c.upturnedCards
 
-App.Models.GameState.createEmpty = ->
-  App.Models.GameState.create
-    tableaux: (App.Models.Tableau.create() for i in [0...7])
-    stock: []
-    waste: []
-    foundations: ([] for i in [0...4])
-
-App.Models.Command = Ember.Object.extend
+class App.Models.Command
   direction: 'do' # default
+
+  constructor: (attributes) ->
+    _(this).extend(attributes)
