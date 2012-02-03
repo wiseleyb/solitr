@@ -15,6 +15,10 @@ body {
   height: 100%;
 }
 
+.ember-view {
+  position: relative; // positioned for z-index of children
+}
+
 .card, .card > div, .base, .base_image, .dropzone {
   width: $card_width;
   height: $card_height;
@@ -48,6 +52,8 @@ body {
 .card {
   background: url(<%= image_path('paris.png') %>);
   background-position: 0 0;
+  //display: none;
+
   .face {
   }
   .back {
