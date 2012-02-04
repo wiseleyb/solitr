@@ -1,14 +1,17 @@
 window.App ?= {}
-App.rootElement = '#solitaire-canvas'
+App.rootElement = '#solitaireCanvas'
 App.Models ?= {}
 
 # Development helpers
 
-window.assert = (exp, msg) ->
-  throw (msg || 'Runtime error') unless exp
+window.assert = (exp, messages...) ->
+  unless exp
+    p 'Assertion failed'
+    p messages
+    throw 'Runtime error'
 
-window.fail = (msg) ->
-  assert(false, msg)
+window.fail = (messages...) ->
+  assert(false, messages...)
 
 window.p = (exp) ->
-  console.log(exp)
+  console.log(window.x = exp)

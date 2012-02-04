@@ -5,9 +5,9 @@ class App.Models.Rank
   letter: ->
     'A23456789TJQK'[@value]
   nextLower: ->
-    if value == 0 then null else App.Models.ranks[value - 1]
+    if @value == 0 then null else App.Models.ranks[@value - 1]
   nextHigher: ->
-    if value == 12 then null else App.Models.ranks[value + 1]
+    if @value == 12 then null else App.Models.ranks[@value + 1]
 
 # Immutable
 class App.Models.Suit
@@ -34,34 +34,37 @@ class App.Models.Card
   string: ->
     "#{@rank.letter()}#{@suit.symbol()}"
 
-class App.Models.Tableau
-  constructor: ->
-    @downturnedCards = []
-    @upturnedCards = []
-
-#    accepts: (card) ->
-#      if @upturnedCards.length == 0
-#        return false unless @downturnedCards.length == 0
-#        card.rank.letter() == 'K'
-#      else
-#        lastCard = _(@upturnedCards).last()
-#        lastCard.rank.nextLower() == card.rank and
-#          lastCard.color != card.color
-
 class App.Models.GameState
+
   constructor: ->
-    @tableaux = (new App.Models.Tableau for i in [0...7])
+    @numberOfFoundations = 4
+    @numberOfTableaux = 7
+    @upturnedTableaux = ([] for i in [0...@numberOfTableaux])
+    @downturnedTableaux = ([] for i in [0...@numberOfTableaux])
     @stock = []
     @waste = []
-    @foundations = ([] for i in [0...4])
+    @foundations = ([] for i in [0...@numberOfFoundations])
+
+  # consistency check
+  assertStructure: ->
+    for arrayName in ['upturnedTableaux', 'downturnedTableaux', 'stock', 'waste', 'foundations']
+      assert this[arrayName] instanceof Array, "#{arrayName} is not an array", this[arrayName]
+    for locator in [['stock'], ['waste'],
+      (['upturnedTableaux', i] for i in [0...@numberOfTableaux])...,
+      (['downturnedTableaux', i] for i in [0...@numberOfTableaux])...,
+      (['foundations', i] for i in [0...@numberOfFoundations])...]
+      collection = @getCollection(locator)
+      assert collection, "collection not found", locator
+      for card in collection
+        assert card instanceof App.Models.Card, "not a Card in collection", card, locator
 
   deal: ->
     @deck = _(@createDeck()).shuffle()
     deckCopy = @deck.slice(0)
-    for tableau, index in @tableaux
-      for i in [0...index]
-        tableau.downturnedCards.push(deckCopy.pop())
-      tableau.upturnedCards.push(deckCopy.pop())
+    for i in [0...@downturnedTableaux.length]
+      for j in [0...i]
+        @downturnedTableaux[i].push(deckCopy.pop())
+      @upturnedTableaux[i].push(deckCopy.pop())
     while deckCopy.length
       @stock.push(deckCopy.pop())
 
@@ -70,10 +73,30 @@ class App.Models.GameState
       for rank in App.Models.ranks \
       for suit in App.Models.suits).flatten()
 
+  foundationAccepts: (foundationIndex, card) ->
+    topMostCard = _(@foundations[foundationIndex]).last()
+    if topMostCard?
+      topMostCard.rank.nextHigher() == card.rank and \
+      topMostCard.suit == card.suit
+    else
+      card.rank.letter() == 'A'
+
   isValidCommand: (cmd) ->
     true
 
-  #constructUndoCommand:
+  getCollection: (locator) ->
+    if locator.length == 2
+      this[locator[0]][locator[1]]
+    else
+      this[locator[0]]
+
+#    validCommand: (cmd) ->
+#      switch cmd.action
+#        when 'move'
+#          assert cmd.numberOfCards == 1, 'not implemented'
+#          return false unless cmd.src
+#          srcCard = _(@getCollection(cmd.src)).last()
+#          return false unless srcCard?
 
   executeCommand: (cmd) ->
     assert @isValidCommand(cmd)
@@ -81,23 +104,25 @@ class App.Models.GameState
     switch cmd.action
       when 'move'
         assert cmd.numberOfCards == 1, 'not implemented'
-        src = @_getMoveCollection(cmd.src)
-        dest = @_getMoveCollection(cmd.dest)
+        src = @getCollection(cmd.src)
+        dest = @getCollection(cmd.dest)
         dest.push(src.pop())
       when 'upturn'
-        tableau = @tableaux[cmd.tableauIndex]
-        tableau.upturnedCards.push(tableau.downturnedCards.pop())
+        @upturnedTableaux[cmd.tableauIndex].push(@downturnedTableaux[cmd.tableauIndex].pop())
       when 'turn'
         for i in [0...3]
-          waste.push(stock.pop()) unless waste.length == 0
+          @waste.push(@stock.pop()) unless @stock.length == 0
       when 'redeal'
-        until stock.length == 0
-          stock.push(waste.pop())
+        while @waste.length
+          @stock.push(@waste.pop())
 
-  _getMoveCollection: (name) -> # 'stock' or ['tableaux', 1]
-    c = if name instanceof Array then this[name[0]][name[1]] else this[name]
-    if c instanceof App.Model.Tableau
-      c = c.upturnedCards
+  nextAutoCommand: ->
+    for i in [0...@downturnedTableaux.length]
+      if @downturnedTableaux[i].length > 0 and @upturnedTableaux[i].length == 0
+        return new App.Models.Command
+          action: 'upturn'
+          tableauIndex: i
+    null
 
 class App.Models.Command
   direction: 'do' # default
