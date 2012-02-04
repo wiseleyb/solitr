@@ -13,5 +13,6 @@ window.assert = (exp, messages...) ->
 window.fail = (messages...) ->
   assert(false, messages...)
 
-window.p = (exp) ->
-  console.log(window.x = exp)
+window.p = (expressions...) ->
+  for exp in expressions
+    console.log(window.x = exp)

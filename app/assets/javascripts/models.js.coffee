@@ -20,7 +20,7 @@ class App.Models.Suit
   letter: ->
     ['CDHS'][@value]
   color: ->
-    if _(['clubs', 'spades']).includes(@string()) then 'black' else 'red'
+    if _(['clubs', 'spades']).include(@string()) then 'black' else 'red'
 
 App.Models.ranks = (new App.Models.Rank(i) for i in [0...13])
 App.Models.suits = (new App.Models.Suit(i) for i in [0...4])
@@ -29,7 +29,7 @@ _nextId = 0
 
 class App.Models.Card
   constructor: (@rank, @suit) ->
-    @id = _nextId++
+    @id = "id#{_nextId++}"
 
   string: ->
     "#{@rank.letter()}#{@suit.symbol()}"
@@ -44,15 +44,18 @@ class App.Models.GameState
     @stock = []
     @waste = []
     @foundations = ([] for i in [0...@numberOfFoundations])
+    @locators = {}
+    @locators.foundations = (['foundations', i] for i in [0...@numberOfFoundations])
+    @locators.downturnedTableaux = (['downturnedTableaux', i] for i in [0...@numberOfTableaux])
+    @locators.upturnedTableaux = (['upturnedTableaux', i] for i in [0...@numberOfTableaux])
+    @locators.all = [['stock'], ['waste'], @locators.foundations...,
+      @locators.downturnedTableaux..., @locators.upturnedTableaux...]
 
   # consistency check
   assertStructure: ->
     for arrayName in ['upturnedTableaux', 'downturnedTableaux', 'stock', 'waste', 'foundations']
       assert this[arrayName] instanceof Array, "#{arrayName} is not an array", this[arrayName]
-    for locator in [['stock'], ['waste'],
-      (['upturnedTableaux', i] for i in [0...@numberOfTableaux])...,
-      (['downturnedTableaux', i] for i in [0...@numberOfTableaux])...,
-      (['foundations', i] for i in [0...@numberOfFoundations])...]
+    for locator in @locators.all
       collection = @getCollection(locator)
       assert collection, "collection not found", locator
       for card in collection
@@ -73,13 +76,25 @@ class App.Models.GameState
       for rank in App.Models.ranks \
       for suit in App.Models.suits).flatten()
 
-  foundationAccepts: (foundationIndex, card) ->
+  foundationAccepts: (foundationIndex, cards) ->
+    assert cards instanceof Array
+    return false if cards.length != 1
     topMostCard = _(@foundations[foundationIndex]).last()
     if topMostCard?
-      topMostCard.rank.nextHigher() == card.rank and \
-      topMostCard.suit == card.suit
+      topMostCard.rank.nextHigher() == cards[0].rank and \
+        topMostCard.suit == cards[0].suit
     else
-      card.rank.letter() == 'A'
+      cards[0].rank.letter() == 'A'
+
+  tableauAccepts: (tableauIndex, cards) ->
+    assert cards instanceof Array
+    topMostCard = _(@upturnedTableaux[tableauIndex]).last()
+    if topMostCard
+      topMostCard.rank.nextLower() == cards[0].rank and \
+        topMostCard.suit.color() != cards[0].suit.color()
+    else
+      @downturnedTableaux[tableauIndex].length == 0 and \
+        cards[0].rank.letter() == 'K'
 
   isValidCommand: (cmd) ->
     true
@@ -97,6 +112,28 @@ class App.Models.GameState
 #          return false unless cmd.src
 #          srcCard = _(@getCollection(cmd.src)).last()
 #          return false unless srcCard?
+
+  getLocator: (card) ->
+    for locator in @locators.all
+      return locator if _(@getCollection(locator)).include(card)
+    null
+
+  # If this card is movable, return an array containing this card and any cards
+  # that would be moved with it. Else, return null.
+  movableCards: (card) ->
+    locator = @getLocator(card)
+    assert(locator)
+    collection = @getCollection(locator)
+    switch locator[0]
+      when 'waste', 'foundations'
+        if collection.indexOf(card) == collection.length - 1
+          [card]
+        else
+          null
+      when 'upturnedTableaux'
+        collection.slice(collection.indexOf(card))
+      else
+        null
 
   executeCommand: (cmd) ->
     assert @isValidCommand(cmd)
