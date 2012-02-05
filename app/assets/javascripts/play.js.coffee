@@ -10,15 +10,12 @@ class App.CardController
   @setToCardSize: (element) ->
     $(element).width(App.CardController.cardWidth).height(App.CardController.cardHeight)
 
-  # Eventually this should just save the parameters as a "resting position" and
-  # let the visual updating be handled by animation code.
   setPosition: (pos, zIndex, upturned) ->
     @restingState =
       position: _.clone(pos)
       zIndex: zIndex
       upturned: upturned
     $(@element).css(pos).css(zIndex: zIndex)
-    App.CardController.setToCardSize(@element)
     @setUpturned(upturned)
 
   show: -> $(@element).show()
@@ -39,6 +36,7 @@ class App.CardController
     @element.id = @model.id
     #$(@element).css '-webkit-transform': "rotate(#{Math.random() * 2 - 1}deg)"
     @setUpturned(false)
+    App.CardController.setToCardSize(@element)
     $(rootElement).append($(@element))
 
 class App.GameController
@@ -89,8 +87,8 @@ class App.GameController
     @gameState.deal()
     # Initialize card controllers
     for card in @gameState.deck
-      @cardControllers[card.id] = cardController = new App.CardController(card)
-      cardController.appendTo(@rootElement)
+      @cardControllers[card.id] = new App.CardController(card)
+      @cardControllers[card.id].appendTo(@rootElement)
     @animateAfterCommand('deal')
     cardController.show() for id, cardController of @cardControllers
 
@@ -128,6 +126,7 @@ class App.GameController
     @updateWidgets()
 
   removeEventHandlers: ->
+    $(@rootElement).rawdraggable('destroy')
     $(@rootElement).off()
 
   registerEventHandlers: ->
@@ -249,14 +248,7 @@ class App.GameController
       @_drawVisualization dropZone
 
   _drawVisualization: (rect) -> # top, left, width, height
-      e = $('<div class="visualization"></div>')
-      e.css
-        backgroundColor: '#080'
-        opacity: 0.2
-        position: 'absolute'
-        zIndex: 1000000
-      e.css rect
-      e.appendTo(@rootElement)
+    $('<div class="visualization"></div>').css(rect).appendTo(@rootElement)
 
   updateWidgets: ->
     setVisibility = (element, visible) ->

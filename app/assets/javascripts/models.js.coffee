@@ -20,7 +20,7 @@ class App.Models.Suit
   letter: ->
     ['CDHS'][@value]
   color: ->
-    if _(['clubs', 'spades']).include(@string()) then 'black' else 'red'
+    if @string() == 'clubs' or @string() == 'spades' then 'black' else 'red'
 
 App.Models.ranks = (new App.Models.Rank(i) for i in [0...13])
 App.Models.suits = (new App.Models.Suit(i) for i in [0...4])
