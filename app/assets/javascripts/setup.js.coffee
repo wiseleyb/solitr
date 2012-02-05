@@ -7,7 +7,7 @@ App.Models ?= {}
 window.assert = (exp, messages...) ->
   unless exp
     p 'Assertion failed'
-    p messages
+    p messages...
     throw 'Runtime error'
 
 window.fail = (messages...) ->

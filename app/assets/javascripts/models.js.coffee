@@ -35,8 +35,10 @@ class App.Models.Card
     "#{@rank.letter()}#{@suit.symbol()}"
 
 class App.Models.GameState
-
   constructor: ->
+    # Rules
+    @cardsToTurn = 3
+
     @numberOfFoundations = 4
     @numberOfTableaux = 7
     @upturnedTableaux = ([] for i in [0...@numberOfTableaux])
@@ -96,22 +98,22 @@ class App.Models.GameState
       @downturnedTableaux[tableauIndex].length == 0 and \
         cards[0].rank.letter() == 'K'
 
-  isValidCommand: (cmd) ->
-    true
-
   getCollection: (locator) ->
     if locator.length == 2
       this[locator[0]][locator[1]]
     else
       this[locator[0]]
 
-#    validCommand: (cmd) ->
-#      switch cmd.action
-#        when 'move'
-#          assert cmd.numberOfCards == 1, 'not implemented'
-#          return false unless cmd.src
-#          srcCard = _(@getCollection(cmd.src)).last()
-#          return false unless srcCard?
+  _assertLocator: (lo) -> assert(1 <= lo.length <= 2)
+
+  isLegalCommand: (cmd) ->
+    switch cmd.action
+      when 'move'
+        @_assertLocator(cmd.src)
+        @_assertLocator(cmd.dest)
+        assert cmd.numberOfCards
+        assert cmd.dest[0] == 'upturnedTableaux' if cmd.numberOfCards > 1
+    true
 
   getLocator: (card) ->
     for locator in @locators.all
@@ -122,7 +124,7 @@ class App.Models.GameState
   # that would be moved with it. Else, return null.
   movableCards: (card) ->
     locator = @getLocator(card)
-    assert(locator)
+    assert(locator?)
     collection = @getCollection(locator)
     switch locator[0]
       when 'waste', 'foundations'
@@ -136,18 +138,19 @@ class App.Models.GameState
         null
 
   executeCommand: (cmd) ->
-    assert @isValidCommand(cmd)
+    assert @isLegalCommand(cmd)
     assert cmd.direction == 'do', 'undo not implemented'
     switch cmd.action
       when 'move'
-        assert cmd.numberOfCards == 1, 'not implemented'
+        assert cmd.numberOfCards == 1, dest unless cmd.dest[0] == 'upturnedTableaux'
         src = @getCollection(cmd.src)
         dest = @getCollection(cmd.dest)
-        dest.push(src.pop())
+        dest.push(src.slice(-cmd.numberOfCards)...)
+        src.pop() for i in [0...cmd.numberOfCards] # seriously?
       when 'upturn'
         @upturnedTableaux[cmd.tableauIndex].push(@downturnedTableaux[cmd.tableauIndex].pop())
       when 'turn'
-        for i in [0...3]
+        for i in [0...@cardsToTurn]
           @waste.push(@stock.pop()) unless @stock.length == 0
       when 'redeal'
         while @waste.length

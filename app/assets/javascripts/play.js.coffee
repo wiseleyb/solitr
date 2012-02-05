@@ -111,7 +111,7 @@ class App.GameController
       @getCardController(card.id).setPosition @positions.stock, zIndex++, false
     for card, index in @gameState.waste
       pos = _.clone(@positions.waste)
-      pos.left += Math.max(index + Math.min(@gameState.waste.length, 3) - @gameState.waste.length, 0) * @positions.wasteFanningOffset
+      pos.left += Math.max(index + Math.min(@gameState.waste.length, @gameState.cardsToTurn) - @gameState.waste.length, 0) * @positions.wasteFanningOffset
       @getCardController(card.id).setPosition pos, zIndex++, true
     for foundation, index in @gameState.foundations
       for card in foundation
@@ -142,7 +142,7 @@ class App.GameController
     for locator in [['waste'], (['upturnedTableaux', i] for i in [0...@gameState.upturnedTableaux.length])...]
       if topMostCard = _(@gameState.getCollection(locator)).last()
         ((locator) => $(@rootElement).on 'dblclick', "##{topMostCard.id}", =>
-          @moveToAnyFoundation(locator))(locator)
+          @playToAnyFoundation(locator))(locator)
     # Everywhere: Drag to move
     $(@rootElement).rawdraggable
       distance: 10
@@ -186,12 +186,17 @@ class App.GameController
           # Find drop zone with maximum overlap
           mapEl = (c) => _(@dragState.elements).map (e) -> c($(e))
           extent =
-            minLeft: Math.min(mapEl (e) -> e.offset().left)
-            minTop: Math.min(mapEl (e) -> e.offset().top)
-            maxLeft: Math.max(mapEl (e) -> e.offset().left + e.width())
-            maxTop: Math.max(mapEl (e) -> e.offset().top + e.height())
+            minLeft: Math.min (mapEl (e) -> e.offset().left)...
+            minTop: Math.min (mapEl (e) -> e.offset().top)...
+            maxLeft: Math.max (mapEl (e) -> e.offset().left + e.width())...
+            maxTop: Math.max (mapEl (e) -> e.offset().top + e.height())...
           maxOverlapArea = 0
           targetDropZone = null
+#            @_drawVisualization
+#              left: extent.minLeft
+#              top: extent.minTop
+#              width: extent.maxLeft - extent.minLeft
+#              height: extent.maxTop - extent.minTop
           for dropZone in @getDropZones(@dragState.cards)
             overlap = {}
             overlap.left = Math.max(dropZone.left, extent.minLeft)
@@ -205,9 +210,9 @@ class App.GameController
               maxOverlapArea = overlap.area
               targetDropZone = dropZone
           if targetDropZone
-            @move(@gameState.getLocator(@dragState.cards[0]), targetDropZone.locator)
+            @move(@dragState.cards, targetDropZone.locator)
           else
-            # Snap back
+            # Snap back cards
             for controller in @dragState.controllers
               ((controller) =>
                 $(controller.element).animate controller.restingState.position, ->
@@ -228,13 +233,13 @@ class App.GameController
       if @gameState.tableauAccepts(i, cards)
         tableauLength = @gameState.downturnedTableaux[i].length + \
           @gameState.upturnedTableaux[i].length
+        tableauLength-- if tableauLength # place on topmost card, not on actual drop point
         dropZones.push
           locator: locator
           top: @positions.tableaux[i].top + tableauLength * @positions.tableauFanningOffset
           left: @positions.tableaux[i].left
           width: App.CardController.cardWidth
-          height: App.CardController.cardHeight - \
-            (if tableauLength then @positions.tableauFanningOffset else 0)
+          height: App.CardController.cardHeight
     dropZones
 
   # development aid
@@ -268,7 +273,7 @@ class App.GameController
   redeal: =>
     @processUserCommand(new App.Models.Command(action: 'redeal'))
 
-  moveToAnyFoundation: (src) =>
+  playToAnyFoundation: (src) =>
     collection = @gameState.getCollection(src)
     card = _(collection).last()
     assert card
@@ -281,12 +286,15 @@ class App.GameController
           numberOfCards: 1
         break
 
-  move: (src, dest, numberOfCards) =>
+  move: (cards, dest) =>
+    @gameState._assertLocator(dest)
+    assert cards instanceof Array
+    assert cards.length == 1, dest, cards unless dest[0] == 'upturnedTableaux'
     @processUserCommand new App.Models.Command
       action: 'move'
-      src: src
+      src: @gameState.getLocator(cards[0])
       dest: dest
-      numberOfCards: numberOfCards
+      numberOfCards: cards.length
 
 $.widget 'ui.rawdraggable', $.ui.mouse,
   widgetEventPrefix: 'rawdraggable'
