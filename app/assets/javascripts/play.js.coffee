@@ -175,29 +175,30 @@ class App.GameController
       for card in @gameState.upturnedTableaux[i]
         @getCardController(card.id).setRestingState pos, zIndex++, true
         pos.top += @positions.tableauFanningOffset
-    shiftingCards = []
-    switch cmd.action
-      when 'move'
-        speed = if cmd.direction == 'undo'
-          @speeds.snapBack
-        else if cmd.guiAction == 'drag'
-          @speeds.snap
-        else
-          @speeds.playToFoundation
-        animatedCards = @gameState.getCollection(if cmd.direction == 'do' then cmd.dest else cmd.src) \
-          .slice(-cmd.numberOfCards)
-        for controller in @getCardControllers(animatedCards)
-          controller.animateToRestingState(speed)
-        shiftingCards = (c for c in @gameState.waste.slice(-@gameState.cardsToTurn) \
-                         when c not in animatedCards)
-      when 'upturn'
-        0
-      when 'turn'
-        0
-      when 'redeal'
-        0
-    for controller in @getCardControllers(shiftingCards)
-      controller.animateToRestingState(@speeds.shift)
+    if cmd?
+      shiftingCards = []
+      switch cmd.action
+        when 'move'
+          speed = if cmd.direction == 'undo'
+            @speeds.snapBack
+          else if cmd.guiAction == 'drag'
+            @speeds.snap
+          else
+            @speeds.playToFoundation
+          animatedCards = @gameState.getCollection(if cmd.direction == 'do' then cmd.dest else cmd.src) \
+            .slice(-cmd.numberOfCards)
+          for controller in @getCardControllers(animatedCards)
+            controller.animateToRestingState(speed)
+          shiftingCards = (c for c in @gameState.waste.slice(-@gameState.cardsToTurn) \
+                           when c not in animatedCards)
+        when 'upturn'
+          0
+        when 'turn'
+          0
+        when 'redeal'
+          0
+      for controller in @getCardControllers(shiftingCards)
+        controller.animateToRestingState(@speeds.shift)
     for controller in _(@cardControllers).values()
       controller.jumpToRestingState()
     @registerEventHandlers()
@@ -368,6 +369,13 @@ class App.GameController
       dest: dest
       numberOfCards: cards.length
       guiAction: 'drag'
+
+  dump: =>
+    "App.gameController.load('#{JSON.stringify(@gameState.dumpHash())}');"
+
+  load: (s) =>
+    @gameState.loadHash(JSON.parse(s))
+    @animateAfterCommand(null)
 
 $.widget 'ui.rawdraggable', $.ui.mouse,
   widgetEventPrefix: 'rawdraggable'

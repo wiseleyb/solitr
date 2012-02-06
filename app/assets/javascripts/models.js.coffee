@@ -79,6 +79,23 @@ class App.Models.GameState
     while deckCopy.length
       @stock.push(deckCopy.pop())
 
+  dumpHash: ->
+    hash = {}
+    for locator in @locators.all
+      hash[locator] = for card in @getCollection(locator)
+        [card.rank.value, card.suit.value]
+    hash
+
+  loadHash: (hash) ->
+    deckCopy = @deck.slice(0)
+    for locator in @locators.all
+      @getCollection(locator).length = 0
+      for [rank, suit] in hash[locator]
+        card = _(deckCopy).find (c) =>
+          c.rank.value == rank and c.suit.value == suit
+        @getCollection(locator).push(card)
+        deckCopy.splice(_(deckCopy).indexOf(card), 1)
+
   createDeck: ->
     _(new App.Models.Card(rank, suit) \
       for rank in App.Models.ranks \
