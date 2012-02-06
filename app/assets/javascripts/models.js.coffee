@@ -38,14 +38,19 @@ class App.Models.GameState
   constructor: ->
     # Rules
     @cardsToTurn = 3
-
     @numberOfFoundations = 4
     @numberOfTableaux = 7
+
+    # Structure
     @upturnedTableaux = ([] for i in [0...@numberOfTableaux])
     @downturnedTableaux = ([] for i in [0...@numberOfTableaux])
     @stock = []
     @waste = []
     @foundations = ([] for i in [0...@numberOfFoundations])
+
+    @undoStack = []
+
+    # Helpers
     @locators = {}
     @locators.foundations = (['foundations', i] for i in [0...@numberOfFoundations])
     @locators.downturnedTableaux = (['downturnedTableaux', i] for i in [0...@numberOfTableaux])
@@ -139,22 +144,43 @@ class App.Models.GameState
 
   executeCommand: (cmd) ->
     assert @isLegalCommand(cmd)
-    assert cmd.direction == 'do', 'undo not implemented'
-    switch cmd.action
-      when 'move'
-        assert cmd.numberOfCards == 1, dest unless cmd.dest[0] == 'upturnedTableaux'
-        src = @getCollection(cmd.src)
-        dest = @getCollection(cmd.dest)
-        dest.push(src.slice(-cmd.numberOfCards)...)
-        src.pop() for i in [0...cmd.numberOfCards] # seriously?
-      when 'upturn'
-        @upturnedTableaux[cmd.tableauIndex].push(@downturnedTableaux[cmd.tableauIndex].pop())
-      when 'turn'
-        for i in [0...@cardsToTurn]
-          @waste.push(@stock.pop()) unless @stock.length == 0
-      when 'redeal'
-        while @waste.length
-          @stock.push(@waste.pop())
+    switch cmd.direction
+      when 'do'
+        undoCommand = cmd.createUndoCommand()
+        switch cmd.action
+          when 'move'
+            src = @getCollection(cmd.src)
+            dest = @getCollection(cmd.dest)
+            dest.push(src.slice(-cmd.numberOfCards)...)
+            src.pop() for i in [0...cmd.numberOfCards] # seriously?
+          when 'upturn'
+            @upturnedTableaux[cmd.tableauIndex].push(@downturnedTableaux[cmd.tableauIndex].pop())
+          when 'turn'
+            undoCommand.cardsTurned = 0
+            while undoCommand.cardsTurned < @cardsToTurn and @stock.length > 0
+              @waste.push(@stock.pop())
+              undoCommand.cardsTurned++
+          when 'redeal'
+            while @waste.length
+              @stock.push(@waste.pop())
+        @undoStack.push([]) unless cmd.initiator == 'auto'
+        _(@undoStack).last().push(undoCommand)
+      when 'undo'
+        switch cmd.action
+          when 'move'
+            src = @getCollection(cmd.src)
+            dest = @getCollection(cmd.dest)
+            src.push(dest.slice(-cmd.numberOfCards)...)
+            dest.pop() for i in [0...cmd.numberOfCards] # seriously?
+          when 'upturn'
+            @downturnedTableaux[cmd.tableauIndex].push(@upturnedTableaux[cmd.tableauIndex].pop())
+          when 'turn'
+            for i in [0...cmd.cardsTurned]
+              assert @waste.length
+              @stock.push(@waste.pop())
+          when 'redeal'
+            while @waste.length
+              @stock.push(@waste.pop())
 
   nextAutoCommand: ->
     for i in [0...@downturnedTableaux.length]
@@ -162,10 +188,15 @@ class App.Models.GameState
         return new App.Models.Command
           action: 'upturn'
           tableauIndex: i
+          initiator: 'auto'
     null
 
 class App.Models.Command
-  direction: 'do' # default
+  direction: 'do' # or: 'undo'
+  initiator: 'user' # or: 'auto'
 
   constructor: (attributes) ->
     _(this).extend(attributes)
+
+  createUndoCommand: ->
+    _(_(this).clone()).extend(direction: 'undo')

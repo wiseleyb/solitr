@@ -6,7 +6,6 @@ To-Do:
 
 * Show free spaces in tableaux
 * Auto-play won
-* Undo
 * You win, play again
 * Select game type
 * Animations
@@ -18,3 +17,4 @@ Bugs:
   don't interfere with positioning.
 * Clicking the stock very fast can cause a double-click to trigger on the
   topmost card which then gets played instantly.
+* Random zIndex issue

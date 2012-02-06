@@ -43,39 +43,48 @@ class App.GameController
   gameState: null
 
   constructor: ->
+    @gameState = new App.Models.GameState
     @cardControllers = {} # map IDs to views
     @rootElement = $(App.rootElement)[0]
-    @positions = @calculatePositions()
+    @calculateGeometry()
     @appendBaseElements()
     @newGame()
 
-  calculatePositions: () ->
+  calculateGeometry: () ->
     firstColumn = 20
     columnOffset = App.CardController.cardWidth + 20
     firstRow = 20
     secondRow = 180
-    {
+    @positions = {
       undealtCards: {left: 0, top: 0}
       stock: {left: firstColumn, top: firstRow}
       waste: {left: firstColumn + columnOffset, top: firstRow}
       wasteFanningOffset: 20
-      foundations: ({left: firstColumn + (3 + i) * columnOffset, top: firstRow} for i in [0...4])
-      tableaux: ({left: firstColumn + i * columnOffset, top: secondRow} for i in [0...7])
+      foundations: ({left: firstColumn + (3 + i) * columnOffset, top: firstRow} for i in [0...@gameState.numberOfFoundations])
+      tableaux: ({left: firstColumn + i * columnOffset, top: secondRow} for i in [0...@gameState.numberOfTableaux])
       tableauFanningOffset: 20
+
+      undoButton: {left: firstColumn + columnOffset * @gameState.numberOfTableaux, top: firstRow}
+    }
+    @sizes = {
+      card: {width: App.CardController.cardWidth, height: App.CardController.cardHeight}
+      button: {width: App.CardController.cardWidth, height: App.CardController.cardHeight / 3}
     }
 
   appendBaseElements: () ->
     baseContainer = $('<div class="baseContainer"></div>')
-    makeBaseCardElement = (name, id) ->
-      e = App.CardController.setToCardSize($("<div class='#{name} baseCardElement' id='#{id ? name}'></div>"))
-      baseContainer.append(e)
-      e
+    makeBaseCardElement = (name, id) =>
+      $("<div class='#{name} baseCardElement' id='#{id ? name}'></div>") \
+        .css(@sizes.card).appendTo(baseContainer)
+
     makeBaseCardElement('exhaustedImage').css(@positions.stock)
     makeBaseCardElement('redealImage').css(@positions.stock)
+    $("<div class='button undoButton'>Undo</div>").css(@positions.undoButton) \
+      .css(@sizes.button).css(lineHeight: "#{@sizes.button.height+1}px").appendTo(baseContainer)
 
     for i in [0...@positions.foundations.length]
       makeBaseCardElement('foundationBase', "foundationBase#{i}").css @positions.foundations[i]
-    for element in baseContainer.find('div')
+    for element in baseContainer.find('base')
       App.CardController.setToCardSize(element)
     $(@rootElement).append(baseContainer)
 
@@ -83,7 +92,6 @@ class App.GameController
     @cardControllers[id]
 
   newGame: ->
-    @gameState = new App.Models.GameState
     @gameState.deal()
     # Initialize card controllers
     for card in @gameState.deck
@@ -101,6 +109,11 @@ class App.GameController
     @gameState.assertStructure()
     @gameState.executeCommand(cmd)
     @animateAfterCommand(cmd)
+
+  undo: =>
+    return unless commands = @gameState.undoStack.pop()
+    while cmd = commands.pop()
+      @processCommand(cmd)
 
   animateAfterCommand: (cmd) ->
     @gameState.assertStructure()
@@ -131,6 +144,8 @@ class App.GameController
 
   registerEventHandlers: ->
     @removeEventHandlers()
+    # Buttons
+    $(@rootElement).on 'click', '.undoButton', @undo
     # Stock: Click to Turn and redeal
     if @gameState.stock.length
       stockCard = _(@gameState.stock).last()
