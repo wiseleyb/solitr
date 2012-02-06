@@ -35,7 +35,7 @@ body {
 
 .foundationBase, .tableauBase {
   background-color: #000;
-  opacity: 0.1;
+  opacity: 0.05;
 }
 
 .redealImage {
@@ -46,9 +46,12 @@ body {
   background-color: #fff;
 }
 
-.card {
+.card, .baseCardElement {
   background: url(<%= image_path('paris.png') %>);
   background-position: 0 0;
+}
+
+.card {
   display: none;
 }
 

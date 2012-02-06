@@ -75,15 +75,19 @@ class App.GameController
     baseContainer = $('<div class="baseContainer"></div>')
     makeBaseCardElement = (name, id) =>
       $("<div class='#{name} baseCardElement' id='#{id ? name}'></div>") \
-        .css(@sizes.card).appendTo(baseContainer)
+        .css(@sizes.card).css(
+          backgroundPosition: "-#{3 * @sizes.card.width}px -#{4 * @sizes.card.height}px"
+        ).appendTo(baseContainer)
 
     makeBaseCardElement('exhaustedImage').css(@positions.stock)
     makeBaseCardElement('redealImage').css(@positions.stock)
-    $("<div class='button undoButton'>Undo</div>").css(@positions.undoButton) \
+    $('<div class="button undoButton">Undo</div>').css(@positions.undoButton) \
       .css(@sizes.button).css(lineHeight: "#{@sizes.button.height+1}px").appendTo(baseContainer)
 
-    for i in [0...@positions.foundations.length]
+    for i in [0...@gameState.numberOfFoundations]
       makeBaseCardElement('foundationBase', "foundationBase#{i}").css @positions.foundations[i]
+    for i in [0...@gameState.numberOfTableaux]
+      makeBaseCardElement('tableauBase', "tableauBase#{i}").css @positions.tableaux[i]
     for element in baseContainer.find('base')
       App.CardController.setToCardSize(element)
     $(@rootElement).append(baseContainer)

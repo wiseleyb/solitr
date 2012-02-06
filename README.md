@@ -4,7 +4,6 @@ It is licensed under the MIT License.
 
 To-Do:
 
-* Show free spaces in tableaux
 * Auto-play won
 * You win, play again
 * Select game type
