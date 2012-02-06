@@ -1,6 +1,12 @@
 #= require_self
 #= require models
 
+# zIndex:
+# 0-999: static base elements
+# 1000-1999: resting cards
+# 2000-2999: animated cards
+# 3000-3999: dragging cards
+
 class App.CardController
   constructor: (@model) ->
     @element = null
@@ -10,13 +16,26 @@ class App.CardController
   @setToCardSize: (element) ->
     $(element).width(App.CardController.cardWidth).height(App.CardController.cardHeight)
 
-  setPosition: (pos, zIndex, upturned) ->
+  setRestingState: (pos, zIndex, upturned) ->
     @restingState =
       position: _.clone(pos)
       zIndex: zIndex
       upturned: upturned
-    $(@element).css(pos).css(zIndex: zIndex)
     @setUpturned(upturned)
+
+  jumpToRestingState: ->
+    $(@element).queue (next) =>
+      $(@element).css(zIndex: @restingState.zIndex).css(@restingState.position)
+      next()
+
+  animateToRestingState: (options) ->
+    $(@element).queue (next) =>
+      $(@element).css zIndex: @restingState.zIndex + 1000
+      next()
+    $(@element).animate(@restingState.position, options)
+    $(@element).queue (next) =>
+      $(@element).css zIndex: @restingState.zIndex
+      next()
 
   show: -> $(@element).show()
   hide: -> $(@element).hide()
@@ -55,7 +74,7 @@ class App.GameController
     columnOffset = App.CardController.cardWidth + 20
     firstRow = 20
     secondRow = 180
-    @positions = {
+    @positions =
       undealtCards: {left: 0, top: 0}
       stock: {left: firstColumn, top: firstRow}
       waste: {left: firstColumn + columnOffset, top: firstRow}
@@ -65,11 +84,25 @@ class App.GameController
       tableauFanningOffset: 20
 
       undoButton: {left: firstColumn + columnOffset * @gameState.numberOfTableaux, top: firstRow}
-    }
-    @sizes = {
+    @sizes =
       card: {width: App.CardController.cardWidth, height: App.CardController.cardHeight}
       button: {width: App.CardController.cardWidth, height: App.CardController.cardHeight / 3}
-    }
+    @speeds =
+      snap:
+        duration: 50
+        easing: 'linear'
+      snapBack:
+        duration: 300
+        easing: 'swing'
+      playToFoundation:
+        duration: 500
+        easing: 'swing'
+      undoMove:
+        duration: 300
+        easing: 'swing'
+      shift:
+        duration: 20
+        easing: 'linear'
 
   appendBaseElements: () ->
     baseContainer = $('<div class="baseContainer"></div>')
@@ -92,8 +125,11 @@ class App.GameController
       App.CardController.setToCardSize(element)
     $(@rootElement).append(baseContainer)
 
-  getCardController: (id) ->
-    @cardControllers[id]
+  getCardControllers: (cardsOrIds) ->
+    @getCardController(c) for c in cardsOrIds
+
+  getCardController: (cardOrId) ->
+    @cardControllers[if cardOrId instanceof App.Models.Card then cardOrId.id else cardOrId]
 
   newGame: ->
     @gameState.deal()
@@ -123,22 +159,47 @@ class App.GameController
     @gameState.assertStructure()
     zIndex = 10
     for card in @gameState.stock
-      @getCardController(card.id).setPosition @positions.stock, zIndex++, false
+      @getCardController(card.id).setRestingState @positions.stock, zIndex++, false
     for card, index in @gameState.waste
       pos = _.clone(@positions.waste)
       pos.left += Math.max(index + Math.min(@gameState.waste.length, @gameState.cardsToTurn) - @gameState.waste.length, 0) * @positions.wasteFanningOffset
-      @getCardController(card.id).setPosition pos, zIndex++, true
+      @getCardController(card.id).setRestingState pos, zIndex++, true
     for foundation, index in @gameState.foundations
       for card in foundation
-        @getCardController(card.id).setPosition @positions.foundations[index], zIndex++, true
+        @getCardController(card.id).setRestingState @positions.foundations[index], zIndex++, true
     for i in [0...@gameState.downturnedTableaux.length]
       pos = _.clone(@positions.tableaux[i])
       for card in @gameState.downturnedTableaux[i]
-        @getCardController(card.id).setPosition pos, zIndex++, false
+        @getCardController(card.id).setRestingState pos, zIndex++, false
         pos.top += @positions.tableauFanningOffset
       for card in @gameState.upturnedTableaux[i]
-        @getCardController(card.id).setPosition pos, zIndex++, true
+        @getCardController(card.id).setRestingState pos, zIndex++, true
         pos.top += @positions.tableauFanningOffset
+    shiftingCards = []
+    switch cmd.action
+      when 'move'
+        speed = if cmd.direction == 'undo'
+          @speeds.snapBack
+        else if cmd.guiAction == 'drag'
+          @speeds.snap
+        else
+          @speeds.playToFoundation
+        animatedCards = @gameState.getCollection(if cmd.direction == 'do' then cmd.dest else cmd.src) \
+          .slice(-cmd.numberOfCards)
+        for controller in @getCardControllers(animatedCards)
+          controller.animateToRestingState(speed)
+        shiftingCards = (c for c in @gameState.waste.slice(-@gameState.cardsToTurn) \
+                         when c not in animatedCards)
+      when 'upturn'
+        0
+      when 'turn'
+        0
+      when 'redeal'
+        0
+    for controller in @getCardControllers(shiftingCards)
+      controller.animateToRestingState(@speeds.shift)
+    for controller in _(@cardControllers).values()
+      controller.jumpToRestingState()
     @registerEventHandlers()
     @updateWidgets()
 
@@ -174,18 +235,17 @@ class App.GameController
       mouseStart: (e) =>
         @dragState.startPagePosition = left: e.pageX, top: e.pageY
         @dragState.cards = @gameState.movableCards(@dragState.startController.model)
-        @dragState.controllers = _(@dragState.cards ? []).map (c) => @getCardController(c.id)
+        @dragState.controllers = @getCardControllers(@dragState.cards ? [])
         if @dragState.cards
-          @dragState.elements = @dragState.controllers.map (c) => c.element
+          @dragState.elements = (c.element for c in @dragState.controllers)
         else
           # We cannot drag this card, so drag only its ghost
           clone = $(@dragState.startController.element).clone()
           clone.removeAttr('id', null).css(opacity: '0.5').appendTo(@rootElement)
           @dragState.elements = clone
-        @dragState.originalElementPositions = _(@dragState.elements).map (el) ->
-          $(el).position()
+        @dragState.originalElementPositions = ($(el).position() for el in @dragState.elements)
         for el in @dragState.elements
-          $(el).css zIndex: $(el).css('zIndex') + 1000
+          $(el).css zIndex: parseInt($(el).css('zIndex') ? '0') + 2000
       mouseDrag: (e) =>
         #@_visualizeDropZones(@dragState.cards)
         for el, i in @dragState.elements
@@ -202,7 +262,7 @@ class App.GameController
             }, -> $(this).remove()
         else
           # Find drop zone with maximum overlap
-          mapEl = (c) => _(@dragState.elements).map (e) -> c($(e))
+          mapEl = (c) => (c($(e)) for e in @dragState.elements)
           extent =
             minLeft: Math.min (mapEl (e) -> e.offset().left)...
             minTop: Math.min (mapEl (e) -> e.offset().top)...
@@ -295,6 +355,7 @@ class App.GameController
           src: src
           dest: ['foundations', foundationIndex]
           numberOfCards: 1
+          guiAction: 'click'
         break
 
   move: (cards, dest) =>
@@ -306,6 +367,7 @@ class App.GameController
       src: @gameState.getLocator(cards[0])
       dest: dest
       numberOfCards: cards.length
+      guiAction: 'drag'
 
 $.widget 'ui.rawdraggable', $.ui.mouse,
   widgetEventPrefix: 'rawdraggable'
@@ -329,4 +391,4 @@ $.widget 'ui.rawdraggable', $.ui.mouse,
 
 App.setupGame = ->
   $ ->
-    gameController = new App.GameController
+    App.gameController = new App.GameController

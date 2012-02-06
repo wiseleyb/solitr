@@ -58,6 +58,8 @@ class App.Models.GameState
     @locators.all = [['stock'], ['waste'], @locators.foundations...,
       @locators.downturnedTableaux..., @locators.upturnedTableaux...]
 
+    @deck = _(@createDeck()).shuffle()
+
   # consistency check
   assertStructure: ->
     for arrayName in ['upturnedTableaux', 'downturnedTableaux', 'stock', 'waste', 'foundations']
@@ -69,7 +71,6 @@ class App.Models.GameState
         assert card instanceof App.Models.Card, "not a Card in collection", card, locator
 
   deal: ->
-    @deck = _(@createDeck()).shuffle()
     deckCopy = @deck.slice(0)
     for i in [0...@downturnedTableaux.length]
       for j in [0...i]
@@ -179,8 +180,8 @@ class App.Models.GameState
               assert @waste.length
               @stock.push(@waste.pop())
           when 'redeal'
-            while @waste.length
-              @stock.push(@waste.pop())
+            while @stock.length
+              @waste.push(@stock.pop())
 
   nextAutoCommand: ->
     for i in [0...@downturnedTableaux.length]
