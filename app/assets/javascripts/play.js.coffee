@@ -117,9 +117,9 @@ class App.GameController
         easing: 'linear'
       snapBack:
         duration: 300
-        easing: 'swing'
+        easing: 'easeOutCubic'
       playToFoundation:
-        duration: 500
+        duration: 450
         easing: 'swing'
       undoMove:
         duration: 300
@@ -174,7 +174,8 @@ class App.GameController
   processUserCommand: (cmd) ->
     @processCommand(cmd)
     while autoCmd = @gameState.nextAutoCommand()
-      # Should block all events here
+      # Note to self: every animation should tell the world how long the next
+      # autoCmd should be delayed.
       @processCommand(autoCmd)
     # Should unblock all events only when last autoCmd processed
     @registerEventHandlers()
@@ -283,10 +284,10 @@ class App.GameController
       mouseCapture: (e) =>
         @dragState = {}
         element = document.elementFromPoint(e.clientX, e.clientY)
-        isCard = $(element).hasClass('card') and element.id
+        isRestingCard = $(element).hasClass('card') and element.id and not $(element).is(':animated')
         # Controller of the card we started dragging
-        @dragState.startController = isCard and @getCardController(element.id)
-        isCard
+        @dragState.startController = isRestingCard and @getCardController(element.id)
+        isRestingCard
       mouseStart: (e) =>
         @dragState.startPagePosition = left: e.pageX, top: e.pageY
         @dragState.cards = @gameState.movableCards(@dragState.startController.model)
@@ -314,7 +315,7 @@ class App.GameController
             $(el).animate {
               left: @dragState.originalElementPositions[i].left
               top: @dragState.originalElementPositions[i].top
-            }, -> $(this).remove()
+            }, _({}).extend(@speeds.snapBack, complete: -> $(this).remove())
         else
           # Find drop zone with maximum overlap
           mapEl = (c) => (c($(e)) for e in @dragState.elements)
@@ -347,10 +348,7 @@ class App.GameController
           else
             # Snap back cards
             for controller in @dragState.controllers
-              ((controller) =>
-                $(controller.element).animate controller.restingState.position, ->
-                  $(controller.element).css zIndex: controller.restingState.zIndex
-                )(controller)
+              controller.animateToRestingPosition(@speeds.snapBack)
 
   getDropZones: (cards) ->
     dropZones = []
@@ -390,8 +388,9 @@ class App.GameController
     exhausted = @gameState.stock.length == @gameState.waste.length == 0
     setVisibility '.exhaustedImage', exhausted
     setVisibility '.redealImage', not exhausted
-#      for foundation, i in @gameState.foundations
-#        setVisibility "#foundationBase#{i}", foundation.length == 0
+    # Seriously IE?!
+    if ($.browser.msie)
+      $('body').find(':not(input)').attr('unselectable', 'on')
 
   turnStock: =>
     @processUserCommand(new App.Models.Command(action: 'turn'))
