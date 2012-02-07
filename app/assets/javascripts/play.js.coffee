@@ -410,7 +410,6 @@ class App.GameController
           src: src
           dest: ['foundations', foundationIndex]
           numberOfCards: 1
-          guiAction: 'click'
         break
 
   move: (cards, dest) =>
@@ -430,6 +429,7 @@ class App.GameController
   load: (s) =>
     @gameState.loadHash(JSON.parse(s))
     @animateAfterCommand(null)
+    @registerEventHandlers()
 
 $.widget 'ui.rawdraggable', $.ui.mouse,
   widgetEventPrefix: 'rawdraggable'

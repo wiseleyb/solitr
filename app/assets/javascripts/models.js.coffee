@@ -84,6 +84,7 @@ class App.Models.GameState
     for locator in @locators.all
       hash[locator] = for card in @getCollection(locator)
         [card.rank.value, card.suit.value]
+    hash['undoStack'] = @undoStack
     hash
 
   loadHash: (hash) ->
@@ -95,6 +96,10 @@ class App.Models.GameState
           c.rank.value == rank and c.suit.value == suit
         @getCollection(locator).push(card)
         deckCopy.splice(_(deckCopy).indexOf(card), 1)
+    @undoStack = hash['undoStack']
+    for list in @undoStack
+      for cmd in list
+        cmd.__proto__ = App.Models.Command
 
   createDeck: ->
     _(new App.Models.Card(rank, suit) \
@@ -207,7 +212,26 @@ class App.Models.GameState
           action: 'upturn'
           tableauIndex: i
           initiator: 'auto'
+    if @_isObviouslyWon()
+      candidateLocators = (lo for lo in [['waste'], @locators.upturnedTableaux...] \
+                           when @getCollection(lo).length > 0)
+      srcLocator = _(candidateLocators).min (lo) => _(@getCollection(lo)).last().rank.value
+      if srcLocator
+        for i in [0...@numberOfFoundations]
+          if @foundationAccepts(i, [_(@getCollection(srcLocator)).last()])
+            return new App.Models.Command
+              action: 'move'
+              src: srcLocator
+              dest: ['foundations', i]
+              numberOfCards: 1
+              initiator: 'auto'
     null
+
+  _isObviouslyWon: ->
+    return false if @stock.length > 0 or @waste.length > 1
+    for downturnedTableau in @downturnedTableaux
+      return false if downturnedTableau.length > 0
+    true
 
 class App.Models.Command
   direction: 'do' # or: 'undo'
