@@ -24,8 +24,6 @@ class App.CardController
 
   jumpToRestingPosition: ->
     currentState = _(@restingState).clone()
-    if parseInt($(@element).css('z-index')) < 1000
-      $(@element).css(zIndex: currentState.zIndex)
     $(@element).queue (next) =>
       $(@element).css(zIndex: currentState.zIndex).css(currentState.position)
       next()
@@ -167,32 +165,41 @@ class App.GameController
     for card in @gameState.deck
       @cardControllers[card.id] = new App.CardController(card)
       @cardControllers[card.id].appendTo(@rootElement)
-    @animateAfterCommand('deal')
+    @renderAfterCommand('deal')
     @registerEventHandlers()
     cardController.show() for id, cardController of @cardControllers
 
   processUserCommand: (cmd) ->
+    @removeEventHandlers()
     @processCommand(cmd)
-    while autoCmd = @gameState.nextAutoCommand()
-      # Note to self: every animation should tell the world how long the next
-      # autoCmd should be delayed.
-      @processCommand(autoCmd)
-    # Should unblock all events only when last autoCmd processed
-    @registerEventHandlers()
+    if @gameState.nextAutoCommand()
+      setTimeout (=>
+        @processUserCommand(@gameState.nextAutoCommand())
+      ), @nextAnimationDelay(cmd)
+    else
+      @registerEventHandlers()
 
+  # Process cmd and update GUI. Does not care about event handlers.
   processCommand: (cmd) ->
     @gameState.assertStructure()
     @gameState.executeCommand(cmd)
-    @animateAfterCommand(cmd)
+    @renderAfterCommand(cmd)
 
   undo: =>
-    return unless commands = @gameState.undoStack.pop()
-    while cmd = commands.pop()
-      @processCommand(cmd)
-    @registerEventHandlers()
+    return unless commandList = _(@gameState.undoStack).last()
+    @removeEventHandlers()
+    cmd = commandList.pop()
+    @processCommand(cmd)
+    if commandList.length
+      # More commands in the current command list. Continue after delay.
+      setTimeout @undo, @nextAnimationDelay(cmd)
+    else
+      # We're done. Pop the empty command list from the undo stack and return
+      # control to player.
+      @gameState.undoStack.pop()
+      @registerEventHandlers()
 
-  animateAfterCommand: (cmd) ->
-    @gameState.assertStructure()
+  updateRestingStates: ->
     zIndex = 10
     for card in @gameState.stock
       @getCardController(card.id).setRestingState @positions.stock, zIndex++, false
@@ -214,50 +221,85 @@ class App.GameController
       for card in @gameState.upturnedTableaux[i]
         @getCardController(card.id).setRestingState pos, zIndex++, true
         pos.top += @positions.tableauFanningOffset
-    if cmd?
-      shiftingCards = []
-      switch cmd.action
-        when 'move'
-          speed = if cmd.direction == 'undo'
-            @speeds.snapBack
-          else if cmd.guiAction == 'drag'
-            @speeds.snap
-          else
-            @speeds.playToFoundation
-          animatedCards = @gameState.getCollection(if cmd.direction == 'do' then cmd.dest else cmd.src) \
-            .slice(-cmd.numberOfCards)
-          for controller in @getCardControllers(animatedCards)
-            controller.animateToRestingPosition(speed)
+
+  # Update GUI after the gameState has been updated according to cmd.
+  renderAfterCommand: (cmd) ->
+    @gameState.assertStructure()
+    @updateRestingStates()
+    @updateWidgets()
+    @animateCards(cmd)
+
+  animateCards: (cmd) ->
+    switch cmd?.action
+      when 'move'
+        speed = if cmd.direction == 'undo'
+          @speeds.undoMove
+        else if cmd.guiAction == 'drag'
+          @speeds.snap
+        else
+          @speeds.playToFoundation
+        movedCards = @gameState.getCollection(if cmd.direction == 'do' then cmd.dest else cmd.src) \
+          .slice(-cmd.numberOfCards)
+        for controller in @getCardControllers(movedCards)
+          controller.animateToRestingPosition(speed)
+        if cmd.src[0] == 'waste' or cmd.dest[0] == 'waste'
           shiftingCards = (c for c in @gameState.waste.slice(-@gameState.cardsToTurn) \
-                           when c not in animatedCards)
-        when 'upturn'
-          if cmd.direction == 'do'
-            assert @gameState.upturnedTableaux[cmd.tableauIndex].length == 1
-            card = @gameState.upturnedTableaux[cmd.tableauIndex][0]
-          else
-            card = _(@gameState.downturnedTableaux[cmd.tableauIndex]).last()
-          @getCardController(card).animateToRestingFace(@speeds.flip)
-        when 'turn'
-          if cmd.direction == 'do'
-            animatedCards = @gameState.waste.slice(-@gameState.cardsToTurn)
-            for controller in @getCardControllers(animatedCards)
-              controller.animateToRestingPosition(@speeds.turn)
-            #shiftingCards = @gameState.waste.slice(-@gameState.cardsToTurn*2+1, -@gameState.cardsToTurn)
-            for card in @gameState.waste.slice(-@gameState.cardsToTurn*2+1, -@gameState.cardsToTurn)
-              $(@getCardController(card).element).delay(@speeds.turn.duration)
-          else
-            animatedCards = @gameState.stock.slice(-cmd.cardsTurned)
-            for controller in @getCardControllers(animatedCards)
-              controller.jumpToRestingFace()
-              controller.animateToRestingPosition(@speeds.turn)
-        when 'redeal'
-          0
-      for controller in @getCardControllers(shiftingCards)
-        controller.animateToRestingPosition(@speeds.shift, false)
+                           when c not in movedCards)
+          for controller in @getCardControllers(shiftingCards)
+            controller.animateToRestingPosition(@speeds.shift, false)
+      when 'upturn'
+        if cmd.direction == 'do'
+          assert @gameState.upturnedTableaux[cmd.tableauIndex].length == 1
+          card = @gameState.upturnedTableaux[cmd.tableauIndex][0]
+        else
+          card = _(@gameState.downturnedTableaux[cmd.tableauIndex]).last()
+        @getCardController(card).animateToRestingFace(@speeds.flip)
+      when 'turn'
+        if cmd.direction == 'do'
+          turnedCards = @gameState.waste.slice(-@gameState.cardsToTurn)
+          for controller in @getCardControllers(turnedCards)
+            controller.animateToRestingPosition(@speeds.turn)
+          # The previous top two cards were fanned out to the right. If we
+          # don't handle them, they'll jump onto the waste. Shifting makes the
+          # animation visually too complex. So we simply hold them in place
+          # (i.e. queue a delay) until the turn has finished animating.
+          previousFannedCards = @gameState.waste.slice(-@gameState.cardsToTurn*2+1, -@gameState.cardsToTurn)
+          for controller in @getCardControllers(previousFannedCards)
+            $(controller.element).delay(@speeds.turn.duration)
+        else
+          turnedCards = @gameState.stock.slice(-cmd.cardsTurned)
+          for controller in @getCardControllers(turnedCards)
+            controller.jumpToRestingFace()
+            controller.animateToRestingPosition(@speeds.turn)
+      when 'redeal'
+        # No animation. Yet.
+        null
+    # Now jump all cards to their resting states. Note that those cards that
+    # have been animated have their jump queued up until after the animation.
+    # In most cases the jumping is a no-op since all cards are already in
+    # place, but with GUIs being fickle, it's best to make sure.
     for controller in _(@cardControllers).values()
       controller.jumpToRestingPosition()
       controller.jumpToRestingFace()
-    @updateWidgets()
+
+  # When multiple commands are automatically performed in sequence (e.g. undo,
+  # auto-play), the animations need to be spaced out. This method returns the
+  # delay to be inserted after the given command.
+  nextAnimationDelay: (cmd) ->
+    switch cmd?.action
+      when 'move'
+        if cmd.direction == 'undo'
+          @speeds.undoMove.duration / 2
+        else if cmd.guiAction == 'drag'
+          @speeds.snap.duration / 2
+        else
+          @speeds.playToFoundation.duration / 2
+      when 'upturn'
+        @speeds.flip.duration / 3
+      when 'turn'
+        @speeds.turn.duration / 2
+      else
+        0
 
   removeEventHandlers: ->
     $(@rootElement).rawdraggable('destroy')
@@ -428,7 +470,7 @@ class App.GameController
 
   load: (s) =>
     @gameState.loadHash(JSON.parse(s))
-    @animateAfterCommand(null)
+    @renderAfterCommand(null)
     @registerEventHandlers()
 
 $.widget 'ui.rawdraggable', $.ui.mouse,
