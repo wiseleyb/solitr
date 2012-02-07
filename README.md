@@ -17,3 +17,4 @@ Bugs:
 * Clicking the stock very fast can cause a double-click to trigger on the
   topmost card which then gets played instantly.
 * Random zIndex issue
+* Make sure we cannot interact with cards while they are :animated

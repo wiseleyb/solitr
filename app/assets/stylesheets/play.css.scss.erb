@@ -1,3 +1,5 @@
+@import "compass/css3/transform";
+
 body {
   height: 100%;
 
@@ -22,6 +24,7 @@ body {
 
 .card {
   position: absolute;
+  @include apply-origin(20px 0, false);
 }
 
 .baseContainer {

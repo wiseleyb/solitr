@@ -21,40 +21,64 @@ class App.CardController
       position: _.clone(pos)
       zIndex: zIndex
       upturned: upturned
-    @setUpturned(upturned)
 
-  jumpToRestingState: ->
+  jumpToRestingPosition: ->
+    currentState = _(@restingState).clone()
+    if parseInt($(@element).css('z-index')) < 1000
+      $(@element).css(zIndex: currentState.zIndex)
     $(@element).queue (next) =>
-      $(@element).css(zIndex: @restingState.zIndex).css(@restingState.position)
+      $(@element).css(zIndex: currentState.zIndex).css(currentState.position)
       next()
 
-  animateToRestingState: (options) ->
+  animateToRestingPosition: (options, liftoff=true) ->
+    currentState = @restingState
     $(@element).queue (next) =>
-      $(@element).css zIndex: @restingState.zIndex + 1000
+      $(@element).css zIndex: currentState.zIndex + if liftoff then 1000 else 0
       next()
-    $(@element).animate(@restingState.position, options)
+    $(@element).animate(currentState.position, options)
     $(@element).queue (next) =>
-      $(@element).css zIndex: @restingState.zIndex
+      $(@element).css zIndex: currentState.zIndex
       next()
+
+  jumpToRestingFace: ->
+    currentState = @restingState
+    $(@element).queue (next) =>
+      $(@element).css backgroundPosition: @getBackgroundPosition(currentState.upturned)
+      next()
+
+  # This method flips the card. Only call it if the face state changed
+  animateToRestingFace: (options) ->
+    $(@element).animate {scale: 1.08},
+      duration: options.duration / 9
+      easing: 'linear'
+    $(@element).animate {scaleX: 0},
+      duration: options.duration * 3/9
+      easing: 'linear'
+    @jumpToRestingFace() # queue new background image
+    $(@element).animate {scaleX: 1},
+      duration: options.duration * 4/9
+      easing: 'linear'
+    $(@element).animate {scale: 1},
+      duration: options.duration / 9
+      easing: 'linear'
 
   show: -> $(@element).show()
   hide: -> $(@element).hide()
 
-  setUpturned: (upturned) ->
+  getBackgroundPosition: (upturned) ->
     [width, height] = [App.CardController.cardWidth, App.CardController.cardHeight]
     if upturned
       left = @model.rank.value * width
       top = _(['clubs', 'diamonds', 'hearts', 'spades']).indexOf(@model.suit.string()) * height
     else
       [left, top] = [2 * width, 4 * height]
-    $(@element).css backgroundPosition: "-#{left}px -#{top}px"
+    "-#{left}px -#{top}px"
 
   appendTo: (rootElement) ->
     @element = document.createElement('div')
     @element.className = 'card'
     @element.id = @model.id
     #$(@element).css '-webkit-transform': "rotate(#{Math.random() * 2 - 1}deg)"
-    @setUpturned(false)
     App.CardController.setToCardSize(@element)
     $(rootElement).append($(@element))
 
@@ -100,9 +124,15 @@ class App.GameController
       undoMove:
         duration: 300
         easing: 'swing'
+      turn:
+        duration: 200
+        easing: 'swing'
       shift:
-        duration: 20
+        duration: 200
         easing: 'linear'
+      flip:
+        duration: 150
+        # Easing determined by method
 
   appendBaseElements: () ->
     baseContainer = $('<div class="baseContainer"></div>')
@@ -138,12 +168,16 @@ class App.GameController
       @cardControllers[card.id] = new App.CardController(card)
       @cardControllers[card.id].appendTo(@rootElement)
     @animateAfterCommand('deal')
+    @registerEventHandlers()
     cardController.show() for id, cardController of @cardControllers
 
   processUserCommand: (cmd) ->
     @processCommand(cmd)
     while autoCmd = @gameState.nextAutoCommand()
+      # Should block all events here
       @processCommand(autoCmd)
+    # Should unblock all events only when last autoCmd processed
+    @registerEventHandlers()
 
   processCommand: (cmd) ->
     @gameState.assertStructure()
@@ -154,20 +188,24 @@ class App.GameController
     return unless commands = @gameState.undoStack.pop()
     while cmd = commands.pop()
       @processCommand(cmd)
+    @registerEventHandlers()
 
   animateAfterCommand: (cmd) ->
     @gameState.assertStructure()
     zIndex = 10
     for card in @gameState.stock
       @getCardController(card.id).setRestingState @positions.stock, zIndex++, false
+    zIndex = 10
     for card, index in @gameState.waste
       pos = _.clone(@positions.waste)
       pos.left += Math.max(index + Math.min(@gameState.waste.length, @gameState.cardsToTurn) - @gameState.waste.length, 0) * @positions.wasteFanningOffset
       @getCardController(card.id).setRestingState pos, zIndex++, true
     for foundation, index in @gameState.foundations
+      zIndex = 10
       for card in foundation
         @getCardController(card.id).setRestingState @positions.foundations[index], zIndex++, true
     for i in [0...@gameState.downturnedTableaux.length]
+      zIndex = 10
       pos = _.clone(@positions.tableaux[i])
       for card in @gameState.downturnedTableaux[i]
         @getCardController(card.id).setRestingState pos, zIndex++, false
@@ -188,20 +226,36 @@ class App.GameController
           animatedCards = @gameState.getCollection(if cmd.direction == 'do' then cmd.dest else cmd.src) \
             .slice(-cmd.numberOfCards)
           for controller in @getCardControllers(animatedCards)
-            controller.animateToRestingState(speed)
+            controller.animateToRestingPosition(speed)
           shiftingCards = (c for c in @gameState.waste.slice(-@gameState.cardsToTurn) \
                            when c not in animatedCards)
         when 'upturn'
-          0
+          if cmd.direction == 'do'
+            assert @gameState.upturnedTableaux[cmd.tableauIndex].length == 1
+            card = @gameState.upturnedTableaux[cmd.tableauIndex][0]
+          else
+            card = _(@gameState.downturnedTableaux[cmd.tableauIndex]).last()
+          @getCardController(card).animateToRestingFace(@speeds.flip)
         when 'turn'
-          0
+          if cmd.direction == 'do'
+            animatedCards = @gameState.waste.slice(-@gameState.cardsToTurn)
+            for controller in @getCardControllers(animatedCards)
+              controller.animateToRestingPosition(@speeds.turn)
+            #shiftingCards = @gameState.waste.slice(-@gameState.cardsToTurn*2+1, -@gameState.cardsToTurn)
+            for card in @gameState.waste.slice(-@gameState.cardsToTurn*2+1, -@gameState.cardsToTurn)
+              $(@getCardController(card).element).delay(@speeds.turn.duration)
+          else
+            animatedCards = @gameState.stock.slice(-cmd.cardsTurned)
+            for controller in @getCardControllers(animatedCards)
+              controller.jumpToRestingFace()
+              controller.animateToRestingPosition(@speeds.turn)
         when 'redeal'
           0
       for controller in @getCardControllers(shiftingCards)
-        controller.animateToRestingState(@speeds.shift)
+        controller.animateToRestingPosition(@speeds.shift, false)
     for controller in _(@cardControllers).values()
-      controller.jumpToRestingState()
-    @registerEventHandlers()
+      controller.jumpToRestingPosition()
+      controller.jumpToRestingFace()
     @updateWidgets()
 
   removeEventHandlers: ->
