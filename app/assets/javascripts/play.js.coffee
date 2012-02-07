@@ -31,7 +31,7 @@ class App.CardController
       next()
 
   animateToRestingPosition: (options, liftoff=true) ->
-    currentState = @restingState
+    currentState = _(@restingState).clone()
     $(@element).queue (next) =>
       $(@element).css zIndex: currentState.zIndex + if liftoff then 1000 else 0
       next()
@@ -41,7 +41,7 @@ class App.CardController
       next()
 
   jumpToRestingFace: ->
-    currentState = @restingState
+    currentState = _(@restingState).clone()
     $(@element).queue (next) =>
       $(@element).css backgroundPosition: @getBackgroundPosition(currentState.upturned)
       next()
@@ -276,8 +276,9 @@ class App.GameController
     # Tableaux: Doubleclick to play to foundation
     for locator in [['waste'], (['upturnedTableaux', i] for i in [0...@gameState.upturnedTableaux.length])...]
       if topMostCard = _(@gameState.getCollection(locator)).last()
-        ((locator) => $(@rootElement).on 'dblclick', "##{topMostCard.id}", =>
-          @playToAnyFoundation(locator))(locator)
+        do (locator) =>
+          $(@rootElement).on 'dblclick', "##{topMostCard.id}", =>
+             @playToAnyFoundation(locator)
     # Everywhere: Drag to move
     $(@rootElement).rawdraggable
       distance: 10
