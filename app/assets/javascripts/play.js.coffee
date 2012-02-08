@@ -13,11 +13,11 @@ class App.CardController
 
   constructor: (@model) ->
 
-  setRestingState: (pos, zIndex, upturned) ->
+  setRestingState: (pos, zIndex, faceUp) ->
     @restingState =
       position: _.clone(pos)
       zIndex: zIndex
-      upturned: upturned
+      faceUp: faceUp
 
   jumpToRestingPosition: ->
     currentState = _(@restingState).clone()
@@ -38,7 +38,7 @@ class App.CardController
   jumpToRestingFace: ->
     currentState = _(@restingState).clone()
     $(@element).queue (next) =>
-      $(@element).css backgroundPosition: @getBackgroundPosition(currentState.upturned)
+      $(@element).css backgroundPosition: @getBackgroundPosition(currentState.faceUp)
       next()
 
   # This method flips the card. Only call it if the face state changed
@@ -61,9 +61,9 @@ class App.CardController
   hide: -> $(@element).hide()
   destroy: -> $(@element).remove()
 
-  getBackgroundPosition: (upturned) ->
+  getBackgroundPosition: (faceUp) ->
     [width, height] = [@size.width, @size.height]
-    if upturned
+    if faceUp
       left = @model.rank.value * width
       top = _(['clubs', 'diamonds', 'hearts', 'spades']).indexOf(@model.suit.string()) * height
     else
@@ -81,7 +81,7 @@ class App.CardController
 class App.KlondikeController
   createGameState: -> # override in subclass
 
-  gameState: null
+  model: null
 
   constructor: ->
     @cardControllers = {} # map IDs to views
@@ -105,11 +105,11 @@ class App.KlondikeController
       stock: {left: firstColumn, top: firstRow}
       waste: {left: firstColumn + columnOffset, top: firstRow}
       wasteFanningOffset: 20
-      foundations: ({left: firstColumn + (3 + i) * columnOffset, top: firstRow} for i in [0...@gameState.numberOfFoundations])
-      tableaux: ({left: firstColumn + i * columnOffset, top: secondRow} for i in [0...@gameState.numberOfTableaux])
+      foundations: ({left: firstColumn + (3 + i) * columnOffset, top: firstRow} for i in [0...@model.numberOfFoundations])
+      tableaux: ({left: firstColumn + i * columnOffset, top: secondRow} for i in [0...@model.numberOfTableaux])
       tableauFanningOffset: 20
 
-      undoButton: {left: firstColumn + columnOffset * @gameState.numberOfTableaux, top: firstRow}
+      undoButton: {left: firstColumn + columnOffset * @model.numberOfTableaux, top: firstRow}
     @speeds =
       snap:
         duration: 50
@@ -147,9 +147,9 @@ class App.KlondikeController
 
     makeBaseCardElement('redealImage', 'redealImage', @positions.stock, 4)
     makeBaseCardElement('exhaustedImage', 'exhaustedImage', @positions.stock, 5)
-    for i in [0...@gameState.numberOfFoundations]
+    for i in [0...@model.numberOfFoundations]
       makeBaseCardElement('foundationBase', "foundationBase#{i}", @positions.foundations[i])
-    for i in [0...@gameState.numberOfTableaux]
+    for i in [0...@model.numberOfTableaux]
       makeBaseCardElement('tableauBase', "tableauBase#{i}", @positions.tableaux[i])
     $('<div class="button gray undoButton">Undo</div>').css(@positions.undoButton) \
       .appendTo(baseContainer)
@@ -177,15 +177,15 @@ class App.KlondikeController
     @cardControllers[if cardOrId instanceof App.Models.Card then cardOrId.id else cardOrId]
 
   newGame: ->
-    @gameState = @createGameState()
+    @model = @createGameState()
     @calculateGeometry()
     @appendBaseElements()
-    @gameState.deal()
+    @model.deal()
     # Initialize card controllers
     for id, controller of @cardControllers
       controller.destroy()
     @cardControllers = {}
-    for card in @gameState.deck
+    for card in @model.deck
       @cardControllers[card.id] = new App.CardController(card)
       @cardControllers[card.id].appendTo(@rootElement)
     @renderAfterCommand('deal')
@@ -195,21 +195,21 @@ class App.KlondikeController
   processUserCommand: (cmd) ->
     @removeEventHandlers()
     @processCommand(cmd)
-    if nextCmd = @gameState.nextAutoCommand()
+    if nextCmd = @model.nextAutoCommand()
       setTimeout (=> @processUserCommand(nextCmd)), @nextAnimationDelay(cmd)
-    else if @gameState.isWon()
+    else if @model.isWon()
       setTimeout @youWin, @nextAnimationDelay(cmd)
     else
       @registerEventHandlers()
 
   # Process cmd and update GUI. Does not care about event handlers.
   processCommand: (cmd) ->
-    @gameState.assertStructure()
-    @gameState.executeCommand(cmd)
+    @model.assertStructure()
+    @model.executeCommand(cmd)
     @renderAfterCommand(cmd)
 
   undo: =>
-    return unless commandList = _(@gameState.undoStack).last()
+    return unless commandList = _(@model.undoStack).last()
     @removeEventHandlers()
     cmd = commandList.pop()
     @processCommand(cmd)
@@ -219,35 +219,35 @@ class App.KlondikeController
     else
       # We're done. Pop the empty command list from the undo stack and return
       # control to player.
-      @gameState.undoStack.pop()
+      @model.undoStack.pop()
       @registerEventHandlers()
 
   updateRestingStates: ->
     zIndex = 10
-    for card in @gameState.stock
+    for card in @model.stock
       @getCardController(card.id).setRestingState @positions.stock, zIndex++, false
     zIndex = 10
-    for card, index in @gameState.waste
+    for card, index in @model.waste
       pos = _.clone(@positions.waste)
-      pos.left += Math.max(index + Math.min(@gameState.waste.length, @gameState.cardsToTurn) - @gameState.waste.length, 0) * @positions.wasteFanningOffset
+      pos.left += Math.max(index + Math.min(@model.waste.length, @model.cardsToTurn) - @model.waste.length, 0) * @positions.wasteFanningOffset
       @getCardController(card.id).setRestingState pos, zIndex++, true
-    for foundation, index in @gameState.foundations
+    for foundation, index in @model.foundations
       zIndex = 10
       for card in foundation
         @getCardController(card.id).setRestingState @positions.foundations[index], zIndex++, true
-    for i in [0...@gameState.downturnedTableaux.length]
+    for i in [0...@model.faceDownTableaux.length]
       zIndex = 10
       pos = _.clone(@positions.tableaux[i])
-      for card in @gameState.downturnedTableaux[i]
+      for card in @model.faceDownTableaux[i]
         @getCardController(card.id).setRestingState pos, zIndex++, false
         pos.top += @positions.tableauFanningOffset
-      for card in @gameState.upturnedTableaux[i]
+      for card in @model.faceUpTableaux[i]
         @getCardController(card.id).setRestingState pos, zIndex++, true
         pos.top += @positions.tableauFanningOffset
 
-  # Update GUI after the gameState has been updated according to cmd.
+  # Update GUI after the model has been updated according to cmd
   renderAfterCommand: (cmd) ->
-    @gameState.assertStructure()
+    @model.assertStructure()
     @updateRestingStates()
     @updateWidgets()
     @animateCards(cmd)
@@ -261,36 +261,36 @@ class App.KlondikeController
           @speeds.snap
         else
           @speeds.playToFoundation
-        movedCards = @gameState.getCollection(if cmd.direction == 'do' then cmd.dest else cmd.src) \
+        movedCards = @model.getCollection(if cmd.direction == 'do' then cmd.dest else cmd.src) \
           .slice(-cmd.numberOfCards)
         for controller in @getCardControllers(movedCards)
           controller.animateToRestingPosition(speed)
         if cmd.src[0] == 'waste' or cmd.dest[0] == 'waste'
-          shiftingCards = (c for c in @gameState.waste.slice(-@gameState.cardsToTurn) \
+          shiftingCards = (c for c in @model.waste.slice(-@model.cardsToTurn) \
                            when c not in movedCards)
           for controller in @getCardControllers(shiftingCards)
             controller.animateToRestingPosition(@speeds.shift, false)
       when 'upturn'
         if cmd.direction == 'do'
-          assert @gameState.upturnedTableaux[cmd.tableauIndex].length == 1
-          card = @gameState.upturnedTableaux[cmd.tableauIndex][0]
+          assert @model.faceUpTableaux[cmd.tableauIndex].length == 1
+          card = @model.faceUpTableaux[cmd.tableauIndex][0]
         else
-          card = _(@gameState.downturnedTableaux[cmd.tableauIndex]).last()
+          card = _(@model.faceDownTableaux[cmd.tableauIndex]).last()
         @getCardController(card).animateToRestingFace(@speeds.flip)
       when 'turn'
         if cmd.direction == 'do'
-          turnedCards = @gameState.waste.slice(-@gameState.cardsToTurn)
+          turnedCards = @model.waste.slice(-@model.cardsToTurn)
           for controller in @getCardControllers(turnedCards)
             controller.animateToRestingPosition(@speeds.turn)
           # The previous top two cards were fanned out to the right. If we
           # don't handle them, they'll jump onto the waste. Shifting makes the
           # animation visually too complex. So we simply hold them in place
           # (i.e. queue a delay) until the turn has finished animating.
-          previousFannedCards = @gameState.waste.slice(-@gameState.cardsToTurn*2+1, -@gameState.cardsToTurn)
+          previousFannedCards = @model.waste.slice(-@model.cardsToTurn*2+1, -@model.cardsToTurn)
           for controller in @getCardControllers(previousFannedCards)
             $(controller.element).delay(@speeds.turn.duration)
         else
-          turnedCards = @gameState.stock.slice(-cmd.cardsTurned)
+          turnedCards = @model.stock.slice(-cmd.cardsTurned)
           for controller in @getCardControllers(turnedCards)
             controller.jumpToRestingFace()
             controller.animateToRestingPosition(@speeds.turn)
@@ -333,14 +333,14 @@ class App.KlondikeController
     # Buttons
     $(@rootElement).on 'click', '.undoButton', @undo
     # Stock: Click to Turn and redeal
-    if @gameState.stock.length
-      stockCard = _(@gameState.stock).last()
+    if @model.stock.length
+      stockCard = _(@model.stock).last()
       $(@rootElement).on 'click', "##{stockCard.id}", @turnStock
-    else if @gameState.waste.length
+    else if @model.waste.length
       $(@rootElement).on 'click', "#redealImage", @redeal
     # Tableaux: Doubleclick to play to foundation
-    for locator in [['waste'], (['upturnedTableaux', i] for i in [0...@gameState.upturnedTableaux.length])...]
-      if topMostCard = _(@gameState.getCollection(locator)).last()
+    for locator in [['waste'], (['faceUpTableaux', i] for i in [0...@model.faceUpTableaux.length])...]
+      if topMostCard = _(@model.getCollection(locator)).last()
         do (locator) =>
           $(@rootElement).on 'dblclick', "##{topMostCard.id}", =>
              @playToAnyFoundation(locator)
@@ -356,7 +356,7 @@ class App.KlondikeController
         isRestingCard
       mouseStart: (e) =>
         @dragState.startPagePosition = left: e.pageX, top: e.pageY
-        @dragState.cards = @gameState.movableCards(@dragState.startController.model)
+        @dragState.cards = @model.movableCards(@dragState.startController.model)
         @dragState.controllers = @getCardControllers(@dragState.cards ? [])
         if @dragState.cards
           @dragState.elements = (c.element for c in @dragState.controllers)
@@ -418,14 +418,14 @@ class App.KlondikeController
 
   getDropZones: (cards) ->
     dropZones = []
-    for locator, i in @gameState.locators.foundations
-      if @gameState.foundationAccepts(i, cards)
+    for locator, i in @model.locators.foundations
+      if @model.foundationAccepts(i, cards)
         dropZones.push _({locator: locator}).extend \
           @positions.foundations[i], @sizes.card
-    for locator, i in @gameState.locators.upturnedTableaux
-      if @gameState.tableauAccepts(i, cards)
-        tableauLength = @gameState.downturnedTableaux[i].length + \
-          @gameState.upturnedTableaux[i].length
+    for locator, i in @model.locators.faceUpTableaux
+      if @model.tableauAccepts(i, cards)
+        tableauLength = @model.faceDownTableaux[i].length + \
+          @model.faceUpTableaux[i].length
         tableauLength-- if tableauLength # place on topmost card, not on actual drop point
         dropZones.push
           locator: locator
@@ -447,7 +447,7 @@ class App.KlondikeController
   updateWidgets: ->
     setVisibility = (element, visible) ->
       if visible then $(element).show() else $(element).hide()
-    exhausted = @gameState.stock.length == @gameState.waste.length == 0
+    exhausted = @model.stock.length == @model.waste.length == 0
     setVisibility '.exhaustedImage', exhausted
     setVisibility '.redealImage', not exhausted
     # Seriously IE?!
@@ -461,11 +461,11 @@ class App.KlondikeController
     @processUserCommand(new App.Models.Command(action: 'redeal'))
 
   playToAnyFoundation: (src) =>
-    collection = @gameState.getCollection(src)
+    collection = @model.getCollection(src)
     card = _(collection).last()
     assert card
-    for foundationIndex in [0...@gameState.foundations.length]
-      if @gameState.foundationAccepts(foundationIndex, [card])
+    for foundationIndex in [0...@model.foundations.length]
+      if @model.foundationAccepts(foundationIndex, [card])
         @processUserCommand new App.Models.Command
           action: 'move'
           src: src
@@ -474,12 +474,12 @@ class App.KlondikeController
         break
 
   move: (cards, dest) =>
-    @gameState._assertLocator(dest)
+    @model._assertLocator(dest)
     assert cards instanceof Array
-    assert cards.length == 1, dest, cards unless dest[0] == 'upturnedTableaux'
+    assert cards.length == 1, dest, cards unless dest[0] == 'faceUpTableaux'
     @processUserCommand new App.Models.Command
       action: 'move'
-      src: @gameState.getLocator(cards[0])
+      src: @model.getLocator(cards[0])
       dest: dest
       numberOfCards: cards.length
       guiAction: 'drag'
@@ -492,10 +492,10 @@ class App.KlondikeController
       @newGame()
 
   dump: =>
-    "App.gameController.load('#{JSON.stringify(@gameState.dumpHash())}');"
+    "App.gameController.load('#{JSON.stringify(@model.dumpHash())}');"
 
   load: (s) =>
-    @gameState.loadHash(JSON.parse(s))
+    @model.loadHash(JSON.parse(s))
     @renderAfterCommand(null)
     @registerEventHandlers()
 
