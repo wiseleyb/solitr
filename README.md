@@ -4,7 +4,5 @@ It is licensed under the MIT License.
 
 To-Do:
 
-* You win, play again
 * Select game type
 * Mouse cursor
-* Prettier button

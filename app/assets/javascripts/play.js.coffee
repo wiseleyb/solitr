@@ -11,10 +11,7 @@ class App.CardController
   constructor: (@model) ->
     @element = null
 
-  @cardWidth: 79
-  @cardHeight: 123
-  @setToCardSize: (element) ->
-    $(element).width(App.CardController.cardWidth).height(App.CardController.cardHeight)
+  @size: {width: 79, height: 123}
 
   setRestingState: (pos, zIndex, upturned) ->
     @restingState =
@@ -62,9 +59,10 @@ class App.CardController
 
   show: -> $(@element).show()
   hide: -> $(@element).hide()
+  destroy: -> $(@element).remove()
 
   getBackgroundPosition: (upturned) ->
-    [width, height] = [App.CardController.cardWidth, App.CardController.cardHeight]
+    [width, height] = [App.CardController.size.width, App.CardController.size.height]
     if upturned
       left = @model.rank.value * width
       top = _(['clubs', 'diamonds', 'hearts', 'spades']).indexOf(@model.suit.string()) * height
@@ -77,23 +75,20 @@ class App.CardController
     @element.className = 'card'
     @element.id = @model.id
     #$(@element).css '-webkit-transform': "rotate(#{Math.random() * 2 - 1}deg)"
-    App.CardController.setToCardSize(@element)
+    $(@element).css(App.CardController.size)
     $(rootElement).append($(@element))
 
 class App.GameController
   gameState: null
 
   constructor: ->
-    @gameState = new App.Models.GameState
     @cardControllers = {} # map IDs to views
     @rootElement = $(App.rootElement)[0]
-    @calculateGeometry()
-    @appendBaseElements()
     @newGame()
 
   calculateGeometry: () ->
     firstColumn = 20
-    columnOffset = App.CardController.cardWidth + 20
+    columnOffset = App.CardController.size.width + 20
     firstRow = 20
     secondRow = 180
     @positions =
@@ -107,8 +102,8 @@ class App.GameController
 
       undoButton: {left: firstColumn + columnOffset * @gameState.numberOfTableaux, top: firstRow}
     @sizes =
-      card: {width: App.CardController.cardWidth, height: App.CardController.cardHeight}
-      button: {width: App.CardController.cardWidth, height: App.CardController.cardHeight / 3}
+      card: App.CardController.size
+      button: {width: App.CardController.size.width, height: App.CardController.size.height / 3}
     @speeds =
       snap:
         duration: 50
@@ -129,29 +124,45 @@ class App.GameController
         duration: 200
         easing: 'linear'
       flip:
-        duration: 150
+        duration: 200
         # Easing determined by method
 
   appendBaseElements: () ->
-    baseContainer = $('<div class="baseContainer"></div>')
-    makeBaseCardElement = (name, id) =>
-      $("<div class='#{name} baseCardElement' id='#{id ? name}'></div>") \
-        .css(@sizes.card).css(
-          backgroundPosition: "-#{3 * @sizes.card.width}px -#{4 * @sizes.card.height}px"
-        ).appendTo(baseContainer)
+    baseContainer = document.createElement('div')
+    baseContainer.className = 'baseContainer'
+    makeBaseCardElement = (className, id, position) =>
+      e = document.createElement('div')
+      e.className = "#{className} baseCardElement"
+      e.id = id if id
+      e.style.cssText = "left: #{position.left}px; top: #{position.top}px;" + \
+        "width: #{@sizes.card.width}px; height: #{@sizes.card.height}px;" + \
+        "background-position: -#{3 * @sizes.card.width}px -#{4 * @sizes.card.height}px;"
+      baseContainer.appendChild(e)
 
-    makeBaseCardElement('exhaustedImage').css(@positions.stock)
-    makeBaseCardElement('redealImage').css(@positions.stock)
-    $('<div class="button undoButton">Undo</div>').css(@positions.undoButton) \
-      .css(@sizes.button).css(lineHeight: "#{@sizes.button.height+1}px").appendTo(baseContainer)
-
+    makeBaseCardElement('exhaustedImage', 'exhaustedImage', @positions.stock)
+    makeBaseCardElement('redealImage', 'redealImage', @positions.stock)
     for i in [0...@gameState.numberOfFoundations]
-      makeBaseCardElement('foundationBase', "foundationBase#{i}").css @positions.foundations[i]
+      makeBaseCardElement('foundationBase', "foundationBase#{i}", @positions.foundations[i])
     for i in [0...@gameState.numberOfTableaux]
-      makeBaseCardElement('tableauBase', "tableauBase#{i}").css @positions.tableaux[i]
-    for element in baseContainer.find('base')
-      App.CardController.setToCardSize(element)
-    $(@rootElement).append(baseContainer)
+      makeBaseCardElement('tableauBase', "tableauBase#{i}", @positions.tableaux[i])
+    $('<div class="button gray undoButton">Undo</div>').css(@positions.undoButton) \
+      .appendTo(baseContainer)
+
+    overlayContainer = document.createElement('div')
+    overlayContainer.className = 'overlayContainer'
+    overlayContainer.innerHTML = '<div class="youWin"><h2>You win!</h2><div class="button green playAgainButton">Deal New Cards</div></div>'
+
+    dummy = document.createElement('div')
+    dummy.className = 'dummy'
+    dummy.style.visibility = 'none'
+
+    @rootElement.appendChild(baseContainer)
+    @rootElement.appendChild(overlayContainer)
+    @rootElement.appendChild(dummy)
+
+    # Between TransformJS and the browser, something is slowing the transform
+    # the first time it's used. So do it here where it doesn't cause jerkiness.
+    $(dummy).css scale: 1
 
   getCardControllers: (cardsOrIds) ->
     @getCardController(c) for c in cardsOrIds
@@ -160,8 +171,14 @@ class App.GameController
     @cardControllers[if cardOrId instanceof App.Models.Card then cardOrId.id else cardOrId]
 
   newGame: ->
+    @gameState = new App.Models.GameState
+    @calculateGeometry()
+    @appendBaseElements()
     @gameState.deal()
     # Initialize card controllers
+    for id, controller of @cardControllers
+      controller.destroy()
+    @cardControllers = {}
     for card in @gameState.deck
       @cardControllers[card.id] = new App.CardController(card)
       @cardControllers[card.id].appendTo(@rootElement)
@@ -172,10 +189,10 @@ class App.GameController
   processUserCommand: (cmd) ->
     @removeEventHandlers()
     @processCommand(cmd)
-    if @gameState.nextAutoCommand()
-      setTimeout (=>
-        @processUserCommand(@gameState.nextAutoCommand())
-      ), @nextAnimationDelay(cmd)
+    if nextCmd = @gameState.nextAutoCommand()
+      setTimeout (=> @processUserCommand(nextCmd)), @nextAnimationDelay(cmd)
+    else if @gameState.isWon()
+      setTimeout @youWin, @nextAnimationDelay(cmd)
     else
       @registerEventHandlers()
 
@@ -293,7 +310,7 @@ class App.GameController
         else if cmd.guiAction == 'drag'
           @speeds.snap.duration / 2
         else
-          @speeds.playToFoundation.duration / 2
+          0 # @speeds.playToFoundation.duration / 2
       when 'upturn'
         @speeds.flip.duration / 3
       when 'turn'
@@ -397,12 +414,8 @@ class App.GameController
     dropZones = []
     for locator, i in @gameState.locators.foundations
       if @gameState.foundationAccepts(i, cards)
-        dropZones.push
-          locator: locator
-          top: @positions.foundations[i].top
-          left: @positions.foundations[i].left
-          width: App.CardController.cardWidth
-          height: App.CardController.cardHeight
+        dropZones.push _({locator: locator}).extend \
+          @positions.foundations[i], App.CardController.size
     for locator, i in @gameState.locators.upturnedTableaux
       if @gameState.tableauAccepts(i, cards)
         tableauLength = @gameState.downturnedTableaux[i].length + \
@@ -412,8 +425,8 @@ class App.GameController
           locator: locator
           top: @positions.tableaux[i].top + tableauLength * @positions.tableauFanningOffset
           left: @positions.tableaux[i].left
-          width: App.CardController.cardWidth
-          height: App.CardController.cardHeight
+          width: App.CardController.size.width
+          height: App.CardController.size.height
     dropZones
 
   # development aid
@@ -464,6 +477,13 @@ class App.GameController
       dest: dest
       numberOfCards: cards.length
       guiAction: 'drag'
+
+  youWin: =>
+    $('.youWin').show()
+    $('.overlayContainer').fadeIn()
+    $('.youWin').off().on 'click', '.playAgainButton', =>
+      $('.overlayContainer').hide()
+      @newGame()
 
   dump: =>
     "App.gameController.load('#{JSON.stringify(@gameState.dumpHash())}');"

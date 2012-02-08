@@ -1,4 +1,4 @@
-@import "compass/css3/transform";
+@import "compass/css3";
 
 body {
   height: 100%;
@@ -25,6 +25,7 @@ body {
 .card {
   position: absolute;
   @include apply-origin(20px 0, false);
+  display: none;
 }
 
 .baseContainer {
@@ -37,25 +38,18 @@ body {
 }
 
 .foundationBase, .tableauBase {
-  background-color: #000;
   opacity: 0.05;
 }
 
 .redealImage {
-  background-color: #dfd;
 }
 
 .exhaustedImage {
-  background-color: #fff;
 }
 
 .card, .baseCardElement {
   background: url(<%= image_path('paris.png') %>);
   background-position: 0 0;
-}
-
-.card {
-  display: none;
 }
 
 .visualization {
@@ -65,34 +59,76 @@ body {
   zIndex: 1000000;
 }
 
-.button {
-  position: absolute;
-  text-align: center;
-  background-color: #8f8;
-}
-
 .undoButton {
+  position: absolute;
+}
+.button {
+  @include border-radius(42px);
+  display:inline-block;
+  font-family:arial;
+  font-size:16px;
+  font-weight:bold;
+  padding:12px 30px;
+  text-decoration:none;
+}
+.button.gray {
+  color:#777777;
+  @include box-shadow(inset 0px 1px 0px 0px #ffffff);
+  @include background(linear-gradient(center top, #ededed 5%, #dfdfdf 100% ));
+  //filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='#ededed', endColorstr='#dfdfdf');
+  background-color:#ededed;
+  border:1px solid #dcdcdc;
+  text-shadow:0px 1px 0px #ffffff;
+}
+.button.gray:active {
+  @include background(linear-gradient(center top, #dfdfdf 5%, #ededed 100%));
+  //filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='#dfdfdf', endColorstr='#ededed');
+  background-color:#dfdfdf;
+}
+.button.green {
+  @include box-shadow(inset 0px 1px 0px 0px #caefab);
+  @include background(linear-gradient(center top, #77d42a 5%, #5cb811 100% ));
+  //filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='#77d42a', endColorstr='#5cb811');
+  background-color:#77d42a;
+  border:1px solid #268a16;
+  color:#306108;
+  text-shadow:1px 1px 0px #aade7c;
+}
+.button.green:active {
+  @include background(linear-gradient(center top, #5cb811 5%, #77d42a 100%));
+  //filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='#5cb811', endColorstr='#77d42a');
+  background-color:#5cb811;
 }
 
-#newGameButton1 {
-}
-#newGameButton2 {
-}
-
-.ui-draggable, .button, #redealImage {
+.button, .redealImage {
   cursor: pointer;
 }
 
-#youWin {
+.overlayContainer {
+  display: none;
+  position: absolute;
+  z-index: 10000;
+  width: 100%;
+  height: 100%;
+  background-color: hsla(0, 0, 100%, 0.8);
+}
+
+.youWin {
+  h2 {
+    font-family: 'Handlee', cursive;
+    font-size: 40pt;
+    text-align: center;
+    text-shadow: 0px 4px 4px #aaa;
+  }
   background-color: #ccf;
   opacity: 0.9;
-  font-size: 40pt;
   padding: 20px;
-  text-align: center;
   position: absolute;
   top: 200px;
   left: 50px;
   width: 580px;
   z-index: 1000000;
   display: none;
+  text-align: center;
+  @include border-radius(10px);
 }

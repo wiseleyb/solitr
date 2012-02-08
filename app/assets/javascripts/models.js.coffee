@@ -233,6 +233,11 @@ class App.Models.GameState
       return false if downturnedTableau.length > 0
     true
 
+  isWon: ->
+    for foundation in @foundations
+      return false if _(foundation).last()?.rank.letter() != 'K'
+    return true
+
 class App.Models.Command
   direction: 'do' # or: 'undo'
   initiator: 'user' # or: 'auto'
