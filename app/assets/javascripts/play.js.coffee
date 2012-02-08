@@ -130,17 +130,17 @@ class App.GameController
   appendBaseElements: () ->
     baseContainer = document.createElement('div')
     baseContainer.className = 'baseContainer'
-    makeBaseCardElement = (className, id, position) =>
+    makeBaseCardElement = (className, id, position, spriteOffset=3) =>
       e = document.createElement('div')
       e.className = "#{className} baseCardElement"
       e.id = id if id
       e.style.cssText = "left: #{position.left}px; top: #{position.top}px;" + \
         "width: #{@sizes.card.width}px; height: #{@sizes.card.height}px;" + \
-        "background-position: -#{3 * @sizes.card.width}px -#{4 * @sizes.card.height}px;"
+        "background-position: -#{spriteOffset * @sizes.card.width}px -#{4 * @sizes.card.height}px;"
       baseContainer.appendChild(e)
 
-    makeBaseCardElement('exhaustedImage', 'exhaustedImage', @positions.stock)
-    makeBaseCardElement('redealImage', 'redealImage', @positions.stock)
+    makeBaseCardElement('redealImage', 'redealImage', @positions.stock, 4)
+    makeBaseCardElement('exhaustedImage', 'exhaustedImage', @positions.stock, 5)
     for i in [0...@gameState.numberOfFoundations]
       makeBaseCardElement('foundationBase', "foundationBase#{i}", @positions.foundations[i])
     for i in [0...@gameState.numberOfTableaux]
