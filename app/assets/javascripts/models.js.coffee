@@ -35,12 +35,11 @@ class App.Models.Card
     "#{@rank.letter()}#{@suit.symbol()}"
 
 class App.Models.GameState
-  constructor: ->
-    # Rules
-    @cardsToTurn = 3
-    @numberOfFoundations = 4
-    @numberOfTableaux = 7
+  cardsToTurn: 3
+  numberOfFoundations: 4
+  numberOfTableaux: 7
 
+  constructor: ->
     # Structure
     @upturnedTableaux = ([] for i in [0...@numberOfTableaux])
     @downturnedTableaux = ([] for i in [0...@numberOfTableaux])
@@ -141,6 +140,8 @@ class App.Models.GameState
         @_assertLocator(cmd.dest)
         assert cmd.numberOfCards
         assert cmd.dest[0] == 'upturnedTableaux' if cmd.numberOfCards > 1
+    # To do: We should check the legality of the command here, not just assert
+    # that it is a valid command at all.
     true
 
   getLocator: (card) ->

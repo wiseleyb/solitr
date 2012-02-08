@@ -8,10 +8,10 @@
 # 3000-3999: dragging cards
 
 class App.CardController
-  constructor: (@model) ->
-    @element = null
+  size: {width: 79, height: 123}
+  element: null
 
-  @size: {width: 79, height: 123}
+  constructor: (@model) ->
 
   setRestingState: (pos, zIndex, upturned) ->
     @restingState =
@@ -62,7 +62,7 @@ class App.CardController
   destroy: -> $(@element).remove()
 
   getBackgroundPosition: (upturned) ->
-    [width, height] = [App.CardController.size.width, App.CardController.size.height]
+    [width, height] = [@size.width, @size.height]
     if upturned
       left = @model.rank.value * width
       top = _(['clubs', 'diamonds', 'hearts', 'spades']).indexOf(@model.suit.string()) * height
@@ -75,8 +75,8 @@ class App.CardController
     @element.className = 'card'
     @element.id = @model.id
     #$(@element).css '-webkit-transform': "rotate(#{Math.random() * 2 - 1}deg)"
-    $(@element).css(App.CardController.size)
-    $(rootElement).append($(@element))
+    $(@element).css(@size)
+    $(rootElement).append(@element)
 
 class App.GameController
   gameState: null
@@ -87,8 +87,11 @@ class App.GameController
     @newGame()
 
   calculateGeometry: () ->
+    @sizes =
+      card: App.CardController.prototype.size
+      button: {width: App.CardController.prototype.size.width, height: App.CardController.prototype.size.height / 3}
     firstColumn = 20
-    columnOffset = App.CardController.size.width + 20
+    columnOffset = @sizes.card.width + 20
     firstRow = 20
     secondRow = 180
     @positions =
@@ -101,9 +104,6 @@ class App.GameController
       tableauFanningOffset: 20
 
       undoButton: {left: firstColumn + columnOffset * @gameState.numberOfTableaux, top: firstRow}
-    @sizes =
-      card: App.CardController.size
-      button: {width: App.CardController.size.width, height: App.CardController.size.height / 3}
     @speeds =
       snap:
         duration: 50
@@ -125,7 +125,7 @@ class App.GameController
         easing: 'linear'
       flip:
         duration: 200
-        # Easing determined by method
+        # Easing determined by animation method
 
   appendBaseElements: () ->
     baseContainer = document.createElement('div')
@@ -415,7 +415,7 @@ class App.GameController
     for locator, i in @gameState.locators.foundations
       if @gameState.foundationAccepts(i, cards)
         dropZones.push _({locator: locator}).extend \
-          @positions.foundations[i], App.CardController.size
+          @positions.foundations[i], @sizes.card
     for locator, i in @gameState.locators.upturnedTableaux
       if @gameState.tableauAccepts(i, cards)
         tableauLength = @gameState.downturnedTableaux[i].length + \
@@ -425,8 +425,8 @@ class App.GameController
           locator: locator
           top: @positions.tableaux[i].top + tableauLength * @positions.tableauFanningOffset
           left: @positions.tableaux[i].left
-          width: App.CardController.size.width
-          height: App.CardController.size.height
+          width: @sizes.card.width
+          height: @sizes.card.height
     dropZones
 
   # development aid
