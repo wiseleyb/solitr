@@ -38,7 +38,7 @@ class App.CardController
   jumpToRestingFace: ->
     currentState = _(@restingState).clone()
     $(@element).queue (next) =>
-      $(@element).css backgroundPosition: @getBackgroundPosition(currentState.faceUp)
+      $(@element).css backgroundPosition: @_getBackgroundPosition(currentState.faceUp)
       next()
 
   # This method flips the card. Only call it if the face state changed
@@ -61,7 +61,7 @@ class App.CardController
   hide: -> $(@element).hide()
   destroy: -> $(@element).remove()
 
-  getBackgroundPosition: (faceUp) ->
+  _getBackgroundPosition: (faceUp) ->
     [width, height] = [@size.width, @size.height]
     if faceUp
       left = @model.rank.value * width
@@ -79,7 +79,7 @@ class App.CardController
     $(rootElement).append(@element)
 
 class App.KlondikeController
-  createGameState: -> # override in subclass
+  createModel: -> # override in subclass
 
   model: null
 
@@ -91,6 +91,29 @@ class App.KlondikeController
   @setupGame: ->
     $ =>
       App.gameController = new this
+
+  speeds:
+    snap:
+      duration: 50
+      easing: 'linear'
+    snapBack:
+      duration: 300
+      easing: 'easeOutCubic'
+    playToFoundation:
+      duration: 450
+      easing: 'swing'
+    undoMove:
+      duration: 300
+      easing: 'swing'
+    turn:
+      duration: 200
+      easing: 'swing'
+    shift:
+      duration: 200
+      easing: 'linear'
+    flip:
+      duration: 200
+      # Easing determined by animation method
 
   calculateGeometry: () ->
     @sizes =
@@ -110,28 +133,6 @@ class App.KlondikeController
       tableauFanningOffset: 20
 
       undoButton: {left: firstColumn + columnOffset * @model.numberOfTableaux, top: firstRow}
-    @speeds =
-      snap:
-        duration: 50
-        easing: 'linear'
-      snapBack:
-        duration: 300
-        easing: 'easeOutCubic'
-      playToFoundation:
-        duration: 450
-        easing: 'swing'
-      undoMove:
-        duration: 300
-        easing: 'swing'
-      turn:
-        duration: 200
-        easing: 'swing'
-      shift:
-        duration: 200
-        easing: 'linear'
-      flip:
-        duration: 200
-        # Easing determined by animation method
 
   appendBaseElements: () ->
     baseContainer = document.createElement('div')
@@ -144,7 +145,6 @@ class App.KlondikeController
         "width: #{@sizes.card.width}px; height: #{@sizes.card.height}px;" + \
         "background-position: -#{spriteOffset * @sizes.card.width}px -#{4 * @sizes.card.height}px;"
       baseContainer.appendChild(e)
-
     makeBaseCardElement('redealImage', 'redealImage', @positions.stock, 4)
     makeBaseCardElement('exhaustedImage', 'exhaustedImage', @positions.stock, 5)
     for i in [0...@model.numberOfFoundations]
@@ -153,35 +153,32 @@ class App.KlondikeController
       makeBaseCardElement('tableauBase', "tableauBase#{i}", @positions.tableaux[i])
     $('<div class="button gray undoButton">Undo</div>').css(@positions.undoButton) \
       .appendTo(baseContainer)
+    @rootElement.appendChild(baseContainer)
 
     overlayContainer = document.createElement('div')
     overlayContainer.className = 'overlayContainer'
     overlayContainer.innerHTML = '<div class="youWin"><h2>You win!</h2><div class="button green playAgainButton">Deal New Cards</div></div>'
-
-    dummy = document.createElement('div')
-    dummy.className = 'dummy'
-    dummy.style.visibility = 'none'
-
-    @rootElement.appendChild(baseContainer)
     @rootElement.appendChild(overlayContainer)
-    @rootElement.appendChild(dummy)
 
     # Between TransformJS and the browser, something is slowing the transform
     # the first time it's used. So do it here where it doesn't cause jerkiness.
+    dummy = document.createElement('div')
+    dummy.className = 'dummy'
+    dummy.style.visibility = 'none'
+    @rootElement.appendChild(dummy)
     $(dummy).css scale: 1
-
-  getCardControllers: (cardsOrIds) ->
-    @getCardController(c) for c in cardsOrIds
 
   getCardController: (cardOrId) ->
     @cardControllers[if cardOrId instanceof App.Models.Card then cardOrId.id else cardOrId]
 
+  getCardControllers: (cardsOrIds) ->
+    @getCardController(c) for c in cardsOrIds
+
   newGame: ->
-    @model = @createGameState()
+    @model = @createModel()
     @calculateGeometry()
     @appendBaseElements()
     @model.deal()
-    # Initialize card controllers
     for id, controller of @cardControllers
       controller.destroy()
     @cardControllers = {}
@@ -209,7 +206,8 @@ class App.KlondikeController
     @renderAfterCommand(cmd)
 
   undo: =>
-    return unless commandList = _(@model.undoStack).last()
+    return if @model.undoStack.length == 0
+    commandList = _(@model.undoStack).last()
     @removeEventHandlers()
     cmd = commandList.pop()
     @processCommand(cmd)
@@ -300,7 +298,8 @@ class App.KlondikeController
     # Now jump all cards to their resting states. Note that those cards that
     # have been animated have their jump queued up until after the animation.
     # In most cases the jumping is a no-op since all cards are already in
-    # place, but with GUIs being fickle, it's best to make sure.
+    # place, but with GUIs being fickle (drag-and-drop in particular), it's
+    # best to make sure.
     for controller in _(@cardControllers).values()
       controller.jumpToRestingPosition()
       controller.jumpToRestingFace()
@@ -311,18 +310,12 @@ class App.KlondikeController
   nextAnimationDelay: (cmd) ->
     switch cmd?.action
       when 'move'
-        if cmd.direction == 'undo'
-          @speeds.undoMove.duration / 2
-        else if cmd.guiAction == 'drag'
-          @speeds.snap.duration / 2
-        else
-          0 # @speeds.playToFoundation.duration / 2
-      when 'upturn'
-        @speeds.flip.duration / 3
-      when 'turn'
-        @speeds.turn.duration / 2
-      else
-        0
+        if cmd.direction == 'undo' then @speeds.undoMove.duration / 2
+        else if cmd.guiAction == 'drag' then @speeds.snap.duration / 2
+        else @speeds.playToFoundation.duration / 2
+      when 'upturn' then @speeds.flip.duration / 3
+      when 'turn' then @speeds.turn.duration / 2
+      else 0
 
   removeEventHandlers: ->
     $(@rootElement).rawdraggable('destroy')
@@ -344,7 +337,9 @@ class App.KlondikeController
         do (locator) =>
           $(@rootElement).on 'dblclick', "##{topMostCard.id}", =>
              @playToAnyFoundation(locator)
-    # Everywhere: Drag to move
+    @_registerDragAndDrop()
+
+  _registerDragAndDrop: ->
     $(@rootElement).rawdraggable
       distance: 10
       mouseCapture: (e) =>
@@ -356,7 +351,7 @@ class App.KlondikeController
         isRestingCard
       mouseStart: (e) =>
         @dragState.startPagePosition = left: e.pageX, top: e.pageY
-        @dragState.cards = @model.movableCards(@dragState.startController.model)
+        @dragState.cards = @model.movedWithCard(@dragState.startController.model)
         @dragState.controllers = @getCardControllers(@dragState.cards ? [])
         if @dragState.cards
           @dragState.elements = (c.element for c in @dragState.controllers)
@@ -392,12 +387,7 @@ class App.KlondikeController
             maxTop: Math.max (mapEl (e) -> e.offset().top + e.height())...
           maxOverlapArea = 0
           targetDropZone = null
-#            @_drawVisualization
-#              left: extent.minLeft
-#              top: extent.minTop
-#              width: extent.maxLeft - extent.minLeft
-#              height: extent.maxTop - extent.minTop
-          for dropZone in @getDropZones(@dragState.cards)
+          for dropZone in @_getDropZones(@dragState.cards)
             overlap = {}
             overlap.left = Math.max(dropZone.left, extent.minLeft)
             overlap.width = Math.max(Math.min(dropZone.left + dropZone.width, extent.maxLeft) \
@@ -416,7 +406,7 @@ class App.KlondikeController
             for controller in @dragState.controllers
               controller.animateToRestingPosition(@speeds.snapBack)
 
-  getDropZones: (cards) ->
+  _getDropZones: (cards) ->
     dropZones = []
     for locator, i in @model.locators.foundations
       if @model.foundationAccepts(i, cards)
@@ -435,12 +425,7 @@ class App.KlondikeController
           height: @sizes.card.height
     dropZones
 
-  # development aid
-  _visualizeDropZones: (cards) ->
-    $('.visualization').remove()
-    for dropZone in @getDropZones(cards)
-      @_drawVisualization dropZone
-
+  # Development aid
   _drawVisualization: (rect) -> # top, left, width, height
     $('<div class="visualization"></div>').css(rect).appendTo(@rootElement)
 
@@ -500,10 +485,10 @@ class App.KlondikeController
     @registerEventHandlers()
 
 class App.KlondikeTurnOneController extends App.KlondikeController
-  createGameState: -> new App.Models.KlondikeTurnOne
+  createModel: -> new App.Models.KlondikeTurnOne
 
 class App.KlondikeTurnThreeController extends App.KlondikeController
-  createGameState: -> new App.Models.KlondikeTurnThree
+  createModel: -> new App.Models.KlondikeTurnThree
 
 $.widget 'ui.rawdraggable', $.ui.mouse,
   widgetEventPrefix: 'rawdraggable'

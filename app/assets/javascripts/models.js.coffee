@@ -22,6 +22,7 @@ class App.Models.Suit
   color: ->
     if @string() == 'clubs' or @string() == 'spades' then 'black' else 'red'
 
+# Do not instantiate Rank and Suit; instead, use these:
 App.Models.ranks = (new App.Models.Rank(i) for i in [0...13])
 App.Models.suits = (new App.Models.Suit(i) for i in [0...4])
 
@@ -49,7 +50,7 @@ class App.Models.Klondike
 
     @undoStack = []
 
-    # Helpers
+    # Locators
     @locators = {}
     @locators.foundations = (['foundations', i] for i in [0...@numberOfFoundations])
     @locators.faceDownTableaux = (['faceDownTableaux', i] for i in [0...@numberOfTableaux])
@@ -151,7 +152,7 @@ class App.Models.Klondike
 
   # If this card is movable, return an array containing this card and any cards
   # that would be moved with it. Else, return null.
-  movableCards: (card) ->
+  movedWithCard: (card) ->
     locator = @getLocator(card)
     assert(locator?)
     collection = @getCollection(locator)
