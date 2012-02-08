@@ -34,8 +34,8 @@ class App.Models.Card
   string: ->
     "#{@rank.letter()}#{@suit.symbol()}"
 
-class App.Models.GameState
-  cardsToTurn: 3
+class App.Models.Klondike
+  cardsToTurn: null # override in subclass
   numberOfFoundations: 4
   numberOfTableaux: 7
 
@@ -238,6 +238,12 @@ class App.Models.GameState
     for foundation in @foundations
       return false if _(foundation).last()?.rank.letter() != 'K'
     return true
+
+class App.Models.KlondikeTurnOne extends App.Models.Klondike
+  cardsToTurn: 1
+
+class App.Models.KlondikeTurnThree extends App.Models.Klondike
+  cardsToTurn: 3
 
 class App.Models.Command
   direction: 'do' # or: 'undo'

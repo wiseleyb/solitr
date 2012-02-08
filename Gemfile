@@ -11,11 +11,9 @@ group :assets do
   gem 'sass-rails',   '~> 3.2.0'
   gem 'coffee-rails', '~> 3.2.0'
   gem 'uglifier', '>= 1.0.3'
-  gem 'slim'
   gem 'compass-rails'
 end
 
-gem 'slim-rails' # generators
 gem 'jquery-rails'
 
 gem 'thin'

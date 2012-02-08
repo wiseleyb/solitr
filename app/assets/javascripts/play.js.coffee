@@ -78,13 +78,19 @@ class App.CardController
     $(@element).css(@size)
     $(rootElement).append(@element)
 
-class App.GameController
+class App.KlondikeController
+  createGameState: -> # override in subclass
+
   gameState: null
 
   constructor: ->
     @cardControllers = {} # map IDs to views
     @rootElement = $(App.rootElement)[0]
     @newGame()
+
+  @setupGame: ->
+    $ =>
+      App.gameController = new this
 
   calculateGeometry: () ->
     @sizes =
@@ -171,7 +177,7 @@ class App.GameController
     @cardControllers[if cardOrId instanceof App.Models.Card then cardOrId.id else cardOrId]
 
   newGame: ->
-    @gameState = new App.Models.GameState
+    @gameState = @createGameState()
     @calculateGeometry()
     @appendBaseElements()
     @gameState.deal()
@@ -493,6 +499,12 @@ class App.GameController
     @renderAfterCommand(null)
     @registerEventHandlers()
 
+class App.KlondikeTurnOneController extends App.KlondikeController
+  createGameState: -> new App.Models.KlondikeTurnOne
+
+class App.KlondikeTurnThreeController extends App.KlondikeController
+  createGameState: -> new App.Models.KlondikeTurnThree
+
 $.widget 'ui.rawdraggable', $.ui.mouse,
   widgetEventPrefix: 'rawdraggable'
   options:
@@ -512,7 +524,3 @@ $.widget 'ui.rawdraggable', $.ui.mouse,
   _mouseDrag: (e) -> @options.mouseDrag(e)
   _mouseStop: (e) -> @options.mouseStop(e)
   _mouseCapture: (e) -> @options.mouseCapture(e)
-
-App.setupGame = ->
-  $ ->
-    App.gameController = new App.GameController
