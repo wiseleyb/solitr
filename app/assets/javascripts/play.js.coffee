@@ -346,7 +346,7 @@ class App.KlondikeController
 
   _registerDragAndDrop: ->
     $(@rootElement).rawdraggable
-      distance: 10
+      distance: 3
       mouseCapture: (e) =>
         @dragState = {}
         element = document.elementFromPoint(e.pageX, e.pageY)
