@@ -12,9 +12,11 @@ group :assets do
   gem 'coffee-rails', '~> 3.2.0'
   gem 'uglifier', '>= 1.0.3'
   gem 'compass-rails'
+  gem 'less-rails-bootstrap'
 end
 
 gem 'jquery-rails'
+gem 'active_link_to'
 
 gem 'thin'
 
