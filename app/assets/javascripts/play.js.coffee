@@ -57,8 +57,6 @@ class App.CardController
       duration: options.duration / 9
       easing: 'linear'
 
-  show: -> $(@element).show()
-  hide: -> $(@element).hide()
   destroy: -> $(@element).remove()
 
   _getBackgroundPosition: (faceUp) ->
@@ -187,7 +185,6 @@ class App.KlondikeController
       @cardControllers[card.id].appendTo(@rootElement)
     @renderAfterCommand('deal')
     @registerEventHandlers()
-    cardController.show() for id, cardController of @cardControllers
 
   processUserCommand: (cmd) ->
     @removeEventHandlers()
