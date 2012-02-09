@@ -333,8 +333,15 @@ class App.KlondikeController
     for locator in [['waste'], (['faceUpTableaux', i] for i in [0...@model.faceUpTableaux.length])...]
       if topMostCard = _(@model.getCollection(locator)).last()
         do (locator) =>
-          $(@rootElement).on 'dblclick', "##{topMostCard.id}", =>
-             @playToAnyFoundation(locator)
+          $(@rootElement).on 'dblclick', "##{topMostCard.id}", (e) =>
+            # If the card is animated, this might be a click to turn the stock
+            # instantly followed by a double-click on the same card (because
+            # the player stock-turns fast). So to avoid auto-playing cards when
+            # advancing through the stock quickly, we check if the card has
+            # just had its animation started. Need to re-check if this works OK
+            # if we ever disable animations.
+            unless locator[0] == 'waste' and $(e.target).is(':animated')
+              @playToAnyFoundation(locator)
     @_registerDragAndDrop()
 
   _registerDragAndDrop: ->
@@ -342,7 +349,7 @@ class App.KlondikeController
       distance: 10
       mouseCapture: (e) =>
         @dragState = {}
-        element = document.elementFromPoint(e.clientX, e.clientY)
+        element = document.elementFromPoint(e.pageX, e.pageY)
         isRestingCard = $(element).hasClass('card') and element.id and not $(element).is(':animated')
         # Controller of the card we started dragging
         @dragState.startController = isRestingCard and @getCardController(element.id)
