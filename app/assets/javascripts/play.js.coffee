@@ -266,7 +266,7 @@ class App.KlondikeController
                            when c not in movedCards)
           for controller in @getCardControllers(shiftingCards)
             controller.animateToRestingPosition(@speeds.shift, false)
-      when 'upturn'
+      when 'flip'
         if cmd.direction == 'do'
           assert @model.faceUpTableaux[cmd.tableauIndex].length == 1
           card = @model.faceUpTableaux[cmd.tableauIndex][0]
@@ -311,7 +311,7 @@ class App.KlondikeController
         if cmd.direction == 'undo' then @speeds.undoMove.duration / 2
         else if cmd.guiAction == 'drag' then @speeds.snap.duration / 2
         else @speeds.playToFoundation.duration / 2
-      when 'upturn' then @speeds.flip.duration / 3
+      when 'flip' then @speeds.flip.duration / 3
       when 'turn' then @speeds.turn.duration / 2
       else 0
 

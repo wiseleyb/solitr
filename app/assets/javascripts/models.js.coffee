@@ -178,7 +178,7 @@ class App.Models.Klondike
             dest = @getCollection(cmd.dest)
             dest.push(src.slice(-cmd.numberOfCards)...)
             src.pop() for i in [0...cmd.numberOfCards] # seriously?
-          when 'upturn'
+          when 'flip'
             @faceUpTableaux[cmd.tableauIndex].push(@faceDownTableaux[cmd.tableauIndex].pop())
           when 'turn'
             undoCommand.cardsTurned = 0
@@ -197,7 +197,7 @@ class App.Models.Klondike
             dest = @getCollection(cmd.dest)
             src.push(dest.slice(-cmd.numberOfCards)...)
             dest.pop() for i in [0...cmd.numberOfCards] # seriously?
-          when 'upturn'
+          when 'flip'
             @faceDownTableaux[cmd.tableauIndex].push(@faceUpTableaux[cmd.tableauIndex].pop())
           when 'turn'
             for i in [0...cmd.cardsTurned]
@@ -208,12 +208,14 @@ class App.Models.Klondike
               @waste.push(@stock.pop())
 
   nextAutoCommand: ->
+    # If any facedown card can be flipped, flip it now
     for i in [0...@faceDownTableaux.length]
       if @faceDownTableaux[i].length > 0 and @faceUpTableaux[i].length == 0
         return new App.Models.Command
-          action: 'upturn'
+          action: 'flip'
           tableauIndex: i
           initiator: 'auto'
+    # Auto-play when obviously won
     if @_isObviouslyWon()
       candidateLocators = (lo for lo in [['waste'], @locators.faceUpTableaux...] \
                            when @getCollection(lo).length > 0)
