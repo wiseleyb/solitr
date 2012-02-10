@@ -17,6 +17,7 @@ end
 
 gem 'jquery-rails'
 gem 'active_link_to'
+gem 'slim'
 
 gem 'thin'
 
