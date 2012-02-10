@@ -219,20 +219,20 @@ class App.KlondikeController
       @registerEventHandlers()
 
   updateRestingStates: ->
-    zIndex = 10
+    zIndex = 1000
     for card in @model.stock
       @getCardController(card.id).setRestingState @positions.stock, zIndex++, false
-    zIndex = 10
+    zIndex = 1000
     for card, index in @model.waste
       pos = _.clone(@positions.waste)
       pos.left += Math.max(index + Math.min(@model.waste.length, @model.cardsToTurn) - @model.waste.length, 0) * @positions.wasteFanningOffset
       @getCardController(card.id).setRestingState pos, zIndex++, true
     for foundation, index in @model.foundations
-      zIndex = 10
+      zIndex = 1000
       for card in foundation
         @getCardController(card.id).setRestingState @positions.foundations[index], zIndex++, true
     for i in [0...@model.faceDownTableaux.length]
-      zIndex = 10
+      zIndex = 1000
       pos = _.clone(@positions.tableaux[i])
       for card in @model.faceDownTableaux[i]
         @getCardController(card.id).setRestingState pos, zIndex++, false
@@ -349,7 +349,10 @@ class App.KlondikeController
       distance: 3
       mouseCapture: (e) =>
         @dragState = {}
-        element = document.elementFromPoint(e.pageX, e.pageY)
+        # clientX/Y returns the mouse coordinates relative to the window. That
+        # is what elementFromPoint expects, except for outdated browsers:
+        # http://www.quirksmode.org/dom/w3c_cssom.html#documentview
+        element = document.elementFromPoint(e.clientX, e.clientY)
         isRestingCard = $(element).hasClass('card') and element.id and not $(element).is(':animated')
         # Controller of the card we started dragging
         @dragState.startController = isRestingCard and @getCardController(element.id)
