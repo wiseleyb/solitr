@@ -198,7 +198,6 @@ class App.KlondikeController
 
   # Process cmd and update GUI. Does not care about event handlers.
   processCommand: (cmd) ->
-    @model.assertStructure()
     @model.executeCommand(cmd)
     @renderAfterCommand(cmd)
 
@@ -242,7 +241,6 @@ class App.KlondikeController
 
   # Update GUI after the model has been updated according to cmd
   renderAfterCommand: (cmd) ->
-    @model.assertStructure()
     @updateRestingStates()
     @updateWidgets()
     @animateCards(cmd)

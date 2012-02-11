@@ -56,16 +56,6 @@ class App.Models.Klondike
 
     @deck = _(@createDeck()).shuffle()
 
-  # consistency check
-  assertStructure: ->
-    for arrayName in ['faceUpTableaux', 'faceDownTableaux', 'stock', 'waste', 'foundations']
-      assert this[arrayName] instanceof Array, "#{arrayName} is not an array", this[arrayName]
-    for locator in @locators.all
-      collection = @getCollection(locator)
-      assert collection, "collection not found", locator
-      for card in collection
-        assert card instanceof App.Models.Card, "not a Card in collection", card, locator
-
   deal: ->
     deckCopy = @deck.slice(0)
     for i in [0...@faceDownTableaux.length]
@@ -74,28 +64,6 @@ class App.Models.Klondike
       @faceUpTableaux[i].push(deckCopy.pop())
     while deckCopy.length
       @stock.push(deckCopy.pop())
-
-  dumpHash: ->
-    hash = {}
-    for locator in @locators.all
-      hash[locator] = for card in @getCollection(locator)
-        [card.rank.value, card.suit.value]
-    hash['undoStack'] = @undoStack
-    hash
-
-  loadHash: (hash) ->
-    deckCopy = @deck.slice(0)
-    for locator in @locators.all
-      @getCollection(locator).length = 0
-      for [rank, suit] in hash[locator]
-        card = _(deckCopy).find (c) =>
-          c.rank.value == rank and c.suit.value == suit
-        @getCollection(locator).push(card)
-        deckCopy.splice(_(deckCopy).indexOf(card), 1)
-    @undoStack = hash['undoStack']
-    for list in @undoStack
-      for cmd in list
-        cmd.__proto__ = App.Models.Command
 
   createDeck: ->
     _(new App.Models.Card(rank, suit) \
@@ -128,19 +96,6 @@ class App.Models.Klondike
     else
       this[locator[0]]
 
-  _assertLocator: (lo) -> assert(1 <= lo.length <= 2)
-
-  isLegalCommand: (cmd) ->
-    switch cmd.action
-      when 'move'
-        @_assertLocator(cmd.src)
-        @_assertLocator(cmd.dest)
-        assert cmd.numberOfCards
-        assert cmd.dest[0] == 'faceUpTableaux' if cmd.numberOfCards > 1
-    # To do: We should check the legality of the command here, not just assert
-    # that it is a valid command at all.
-    true
-
   getLocator: (card) ->
     for locator in @locators.all
       return locator if _(@getCollection(locator)).include(card)
@@ -164,7 +119,8 @@ class App.Models.Klondike
         null
 
   executeCommand: (cmd) ->
-    assert @isLegalCommand(cmd)
+    @_assertStructure()
+    @_assertCommand(cmd)
     switch cmd.direction
       when 'do'
         undoCommand = cmd.createUndoCommand()
@@ -202,6 +158,7 @@ class App.Models.Klondike
           when 'redeal'
             while @stock.length
               @waste.push(@stock.pop())
+    @_assertStructure()
 
   nextAutoCommand: ->
     # If any facedown card can be flipped, flip it now
@@ -237,6 +194,51 @@ class App.Models.Klondike
     for foundation in @foundations
       return false if _(foundation).last()?.rank.letter() != 'K'
     return true
+
+  # Consistency checks
+
+  _assertStructure: ->
+    for arrayName in ['faceUpTableaux', 'faceDownTableaux', 'stock', 'waste', 'foundations']
+      assert this[arrayName] instanceof Array, "#{arrayName} is not an array", this[arrayName]
+    for locator in @locators.all
+      collection = @getCollection(locator)
+      assert collection, "collection not found", locator
+      for card in collection
+        assert card instanceof App.Models.Card, "not a Card in collection", card, locator
+
+  _assertCommand: (cmd) ->
+    switch cmd.action
+      when 'move'
+        @_assertLocator(cmd.src)
+        @_assertLocator(cmd.dest)
+        assert cmd.numberOfCards
+        assert cmd.dest[0] == 'faceUpTableaux' if cmd.numberOfCards > 1
+
+  _assertLocator: (lo) -> assert(1 <= lo.length <= 2)
+
+  # Development helpers to load and save game states
+
+  dumpHash: ->
+    hash = {}
+    for locator in @locators.all
+      hash[locator] = for card in @getCollection(locator)
+        [card.rank.value, card.suit.value]
+    hash['undoStack'] = @undoStack
+    hash
+
+  loadHash: (hash) ->
+    deckCopy = @deck.slice(0)
+    for locator in @locators.all
+      @getCollection(locator).length = 0
+      for [rank, suit] in hash[locator]
+        card = _(deckCopy).find (c) =>
+          c.rank.value == rank and c.suit.value == suit
+        @getCollection(locator).push(card)
+        deckCopy.splice(_(deckCopy).indexOf(card), 1)
+    @undoStack = hash['undoStack']
+    for list in @undoStack
+      for cmd in list
+        cmd.__proto__ = App.Models.Command
 
 class App.Models.KlondikeTurnOne extends App.Models.Klondike
   cardsToTurn: 1
