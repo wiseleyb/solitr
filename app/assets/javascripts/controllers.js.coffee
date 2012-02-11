@@ -5,9 +5,10 @@
 # 3000-3999: dragging cards
 
 window.App ?= {}
+App.Controllers ?= {}
 App.rootElement = '#solitaireCanvas'
 
-class App.CardController
+class App.Controllers.Card
   size: {width: 79, height: 123}
   element: null
 
@@ -75,7 +76,7 @@ class App.CardController
     $(@element).css(@size)
     $(rootElement).append(@element)
 
-class App.KlondikeController
+class App.Controllers.Klondike
   createModel: -> # override in subclass
 
   model: null
@@ -114,8 +115,8 @@ class App.KlondikeController
 
   calculateGeometry: () ->
     @sizes =
-      card: App.CardController.prototype.size
-      button: {width: App.CardController.prototype.size.width, height: App.CardController.prototype.size.height / 3}
+      card: App.Controllers.Card.prototype.size
+      button: {width: App.Controllers.Card.prototype.size.width, height: App.Controllers.Card.prototype.size.height / 3}
     firstColumn = 20
     columnOffset = @sizes.card.width + 20
     firstRow = 20
@@ -179,7 +180,7 @@ class App.KlondikeController
       controller.destroy()
     @cardControllers = {}
     for card in @model.deck
-      @cardControllers[card.id] = new App.CardController(card)
+      @cardControllers[card.id] = new App.Controllers.Card(card)
       @cardControllers[card.id].appendTo(@rootElement)
     @renderAfterCommand('deal')
     @registerEventHandlers()
@@ -487,10 +488,10 @@ class App.KlondikeController
     @renderAfterCommand(null)
     @registerEventHandlers()
 
-class App.KlondikeTurnOneController extends App.KlondikeController
+class App.Controllers.KlondikeTurnOne extends App.Controllers.Klondike
   createModel: -> new App.Models.KlondikeTurnOne
 
-class App.KlondikeTurnThreeController extends App.KlondikeController
+class App.Controllers.KlondikeTurnThree extends App.Controllers.Klondike
   createModel: -> new App.Models.KlondikeTurnThree
 
 $.widget 'ui.rawdraggable', $.ui.mouse,
