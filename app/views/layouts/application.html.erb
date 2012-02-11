@@ -15,17 +15,10 @@
     <div class="container-fluid">
       <!-- <a class="brand" href="/">Solitr</a> -->
       <ul class="nav">
-        <li>
-        </li>
-        <li class="dropdown">
-          <a href="#" class="dropdown-toggle" data-toggle="dropdown">Select Game <b class="caret"></b></a>
-          <ul class="dropdown-menu">
-            <%= active_link_to 'Klondike, turn three (medium)', '/', :wrap_tag => :li, :active => :exclusive %>
-            <%= active_link_to 'Klondike, turn one (easy)', '/klondike-turn-one', :wrap_tag => :li %>
-            <li class="divider"></li>
-            <%= active_link_to 'Spider Solitaire (coming soon)', '/spider-solitaire', :wrap_tag => :li %>
-          </ul>
-        </li>
+        <%= active_link_to 'Klondike, turn three (medium)', '/', :wrap_tag => :li, :active => :exclusive %>
+        <%= active_link_to 'Klondike, turn one (easy)', '/klondike-turn-one', :wrap_tag => :li %>
+        <li class="divider-vertical"></li>
+        <%= active_link_to 'Spider (coming soon)', '/spider-solitaire', :wrap_tag => :li %>
       </ul>
       <ul class="nav pull-right">
         <li><a href="http://www.solitr.com/blog/">Blog</a></li>
