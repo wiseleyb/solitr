@@ -1,3 +1,6 @@
+window.App ?= {}
+App.Models ?= {}
+
 # Immutable
 class App.Models.Rank
   constructor: (@value) ->

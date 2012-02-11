@@ -1,7 +1,3 @@
-window.App ?= {}
-App.rootElement = '#solitaireCanvas'
-App.Models ?= {}
-
 # Development helpers
 
 window.assert = (exp, messages...) ->

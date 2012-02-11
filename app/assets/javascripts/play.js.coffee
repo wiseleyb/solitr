@@ -4,6 +4,9 @@
 # 2000-2999: animated cards
 # 3000-3999: dragging cards
 
+window.App ?= {}
+App.rootElement = '#solitaireCanvas'
+
 class App.CardController
   size: {width: 79, height: 123}
   element: null
