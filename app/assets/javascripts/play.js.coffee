@@ -1,7 +1,3 @@
-#= require_self
-#= require models
-#= require twitter/bootstrap/dropdown
-
 # zIndex:
 # 0-999: static base elements
 # 1000-1999: resting cards
