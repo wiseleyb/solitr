@@ -63,7 +63,7 @@ class App.CardController
     [width, height] = [@size.width, @size.height]
     if faceUp
       left = @model.rank.value * width
-      top = _(['clubs', 'diamonds', 'hearts', 'spades']).indexOf(@model.suit.string()) * height
+      top = 'CDHS'.indexOf(@model.suit.letter()) * height
     else
       [left, top] = [2 * width, 4 * height]
     "-#{left}px -#{top}px"

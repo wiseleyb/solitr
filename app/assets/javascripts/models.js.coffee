@@ -1,7 +1,7 @@
 window.App ?= {}
 App.Models ?= {}
 
-# Immutable
+# Immutable singleton
 class App.Models.Rank
   constructor: (@value) ->
 
@@ -12,18 +12,14 @@ class App.Models.Rank
   nextHigher: ->
     if @value == 12 then null else App.Models.ranks[@value + 1]
 
-# Immutable
+# Immutable singleton
 class App.Models.Suit
   constructor: (@value) ->
 
-  symbol: ->
-    '♣♦♥♠'[@value]
-  string: ->
-    ['clubs', 'diamonds', 'hearts', 'spades'][@value]
   letter: ->
-    ['CDHS'][@value]
+    'CDHS'.charAt(@value) # clubs, diamonds, hearts, spades
   color: ->
-    if @string() == 'clubs' or @string() == 'spades' then 'black' else 'red'
+    if @letter() == 'C' or @letter() == 'S' then 'black' else 'red'
 
 # Do not instantiate Rank and Suit; instead, use these:
 App.Models.ranks = (new App.Models.Rank(i) for i in [0...13])
@@ -34,9 +30,6 @@ _nextId = 0
 class App.Models.Card
   constructor: (@rank, @suit) ->
     @id = "id#{_nextId++}"
-
-  string: ->
-    "#{@rank.letter()}#{@suit.symbol()}"
 
 class App.Models.Klondike
   cardsToTurn: null # override in subclass
