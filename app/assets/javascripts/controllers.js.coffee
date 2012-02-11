@@ -72,7 +72,6 @@ class App.CardController
     @element = document.createElement('div')
     @element.className = 'card'
     @element.id = @model.id
-    #$(@element).css '-webkit-transform': "rotate(#{Math.random() * 2 - 1}deg)"
     $(@element).css(@size)
     $(rootElement).append(@element)
 
@@ -142,7 +141,7 @@ class App.KlondikeController
       e.style.cssText = "left: #{position.left}px; top: #{position.top}px;" + \
         "width: #{@sizes.card.width}px; height: #{@sizes.card.height}px;" + \
         "background-position: -#{spriteOffset * @sizes.card.width}px -#{4 * @sizes.card.height}px;"
-      baseContainer.appendChild(e)
+      $(baseContainer).append(e)
     makeBaseCardElement('redealImage', 'redealImage', @positions.stock, 4)
     makeBaseCardElement('exhaustedImage', 'exhaustedImage', @positions.stock, 5)
     for i in [0...@model.numberOfFoundations]
@@ -151,19 +150,18 @@ class App.KlondikeController
       makeBaseCardElement('tableauBase', "tableauBase#{i}", @positions.tableaux[i])
     $('<div class="button gray undoButton">Undo</div>').css(@positions.undoButton) \
       .appendTo(baseContainer)
-    @rootElement.appendChild(baseContainer)
+    $(@rootElement).append(baseContainer)
 
     overlayContainer = document.createElement('div')
     overlayContainer.className = 'overlayContainer'
     overlayContainer.innerHTML = '<div class="youWin"><h2>You win!</h2><div class="button green playAgainButton">Deal New Cards</div></div>'
-    @rootElement.appendChild(overlayContainer)
+    $(@rootElement).append(overlayContainer)
 
     # Between TransformJS and the browser, something is slowing the transform
     # the first time it's used. So do it here where it doesn't cause jerkiness.
     dummy = document.createElement('div')
     dummy.className = 'dummy'
-    dummy.style.visibility = 'none'
-    @rootElement.appendChild(dummy)
+    $(@rootElement).append(dummy)
     $(dummy).css scale: 1
 
   getCardController: (cardOrId) ->
