@@ -14,6 +14,15 @@ class App.Controllers.Card
 
   constructor: (@model) ->
 
+  appendTo: (rootElement) ->
+    @element = document.createElement('div')
+    @element.className = 'card'
+    @element.id = @model.id
+    $(@element).css(@size)
+    $(rootElement).append(@element)
+
+  destroy: -> $(@element).remove()
+
   setRestingState: (pos, zIndex, faceUp) ->
     @restingState =
       position: _.clone(pos)
@@ -58,8 +67,6 @@ class App.Controllers.Card
       duration: options.duration / 9
       easing: 'linear'
 
-  destroy: -> $(@element).remove()
-
   _getBackgroundPosition: (faceUp) ->
     [width, height] = [@size.width, @size.height]
     if faceUp
@@ -68,13 +75,6 @@ class App.Controllers.Card
     else
       [left, top] = [2 * width, 4 * height]
     "-#{left}px -#{top}px"
-
-  appendTo: (rootElement) ->
-    @element = document.createElement('div')
-    @element.className = 'card'
-    @element.id = @model.id
-    $(@element).css(@size)
-    $(rootElement).append(@element)
 
 class App.Controllers.Klondike
   createModel: -> # override in subclass
@@ -215,6 +215,12 @@ class App.Controllers.Klondike
       @model.undoStack.pop()
       @registerEventHandlers()
 
+  # Update GUI after the model has been updated according to cmd
+  renderAfterCommand: (cmd) ->
+    @updateRestingStates()
+    @updateWidgets()
+    @animateCards(cmd)
+
   updateRestingStates: ->
     zIndex = 1000
     for card in @model.stock
@@ -238,11 +244,15 @@ class App.Controllers.Klondike
         @getCardController(card.id).setRestingState pos, zIndex++, true
         pos.top += @positions.tableauFanningOffset
 
-  # Update GUI after the model has been updated according to cmd
-  renderAfterCommand: (cmd) ->
-    @updateRestingStates()
-    @updateWidgets()
-    @animateCards(cmd)
+  updateWidgets: ->
+    setVisibility = (element, visible) ->
+      if visible then $(element).show() else $(element).hide()
+    exhausted = @model.stock.length == @model.waste.length == 0
+    setVisibility '.exhaustedImage', exhausted
+    setVisibility '.redealImage', not exhausted
+    # Seriously IE?!
+    if ($.browser.msie)
+      $('body').find(':not(input)').attr('unselectable', 'on')
 
   animateCards: (cmd) ->
     switch cmd?.action
@@ -432,16 +442,6 @@ class App.Controllers.Klondike
   # Development aid
   _drawVisualization: (rect) -> # top, left, width, height
     $('<div class="visualization"></div>').css(rect).appendTo(@rootElement)
-
-  updateWidgets: ->
-    setVisibility = (element, visible) ->
-      if visible then $(element).show() else $(element).hide()
-    exhausted = @model.stock.length == @model.waste.length == 0
-    setVisibility '.exhaustedImage', exhausted
-    setVisibility '.redealImage', not exhausted
-    # Seriously IE?!
-    if ($.browser.msie)
-      $('body').find(':not(input)').attr('unselectable', 'on')
 
   turnStock: =>
     @processUserCommand(new App.Models.Command(action: 'turn'))
