@@ -34,12 +34,12 @@ class App.Models.Card
 class App.Models.Klondike
   cardsToTurn: null # override in subclass
   numberOfFoundations: 4
-  numberOfTableaux: 7
+  numberOfTableauPiles: 7
 
   constructor: ->
     # Structure
-    @faceUpTableaux = ([] for i in [0...@numberOfTableaux])
-    @faceDownTableaux = ([] for i in [0...@numberOfTableaux])
+    @faceUpTableauPiles = ([] for i in [0...@numberOfTableauPiles])
+    @faceDownTableauPiles = ([] for i in [0...@numberOfTableauPiles])
     @stock = []
     @waste = []
     @foundations = ([] for i in [0...@numberOfFoundations])
@@ -49,19 +49,19 @@ class App.Models.Klondike
     # Locators
     @locators = {}
     @locators.foundations = (['foundations', i] for i in [0...@numberOfFoundations])
-    @locators.faceDownTableaux = (['faceDownTableaux', i] for i in [0...@numberOfTableaux])
-    @locators.faceUpTableaux = (['faceUpTableaux', i] for i in [0...@numberOfTableaux])
+    @locators.faceDownTableauPiles = (['faceDownTableauPiles', i] for i in [0...@numberOfTableauPiles])
+    @locators.faceUpTableauPiles = (['faceUpTableauPiles', i] for i in [0...@numberOfTableauPiles])
     @locators.all = [['stock'], ['waste'], @locators.foundations...,
-      @locators.faceDownTableaux..., @locators.faceUpTableaux...]
+      @locators.faceDownTableauPiles..., @locators.faceUpTableauPiles...]
 
     @deck = _(@createDeck()).shuffle()
 
   deal: ->
     deckCopy = @deck.slice(0)
-    for i in [0...@faceDownTableaux.length]
+    for i in [0...@faceDownTableauPiles.length]
       for j in [0...i]
-        @faceDownTableaux[i].push(deckCopy.pop())
-      @faceUpTableaux[i].push(deckCopy.pop())
+        @faceDownTableauPiles[i].push(deckCopy.pop())
+      @faceUpTableauPiles[i].push(deckCopy.pop())
     while deckCopy.length
       @stock.push(deckCopy.pop())
 
@@ -80,14 +80,14 @@ class App.Models.Klondike
     else
       cards[0].rank.letter() == 'A'
 
-  tableauAccepts: (tableauIndex, cards) ->
+  tableauPileAccepts: (tableauPileIndex, cards) ->
     assert cards instanceof Array
-    topMostCard = _(@faceUpTableaux[tableauIndex]).last()
+    topMostCard = _(@faceUpTableauPiles[tableauPileIndex]).last()
     if topMostCard
       topMostCard.rank.nextLower() == cards[0].rank and \
         topMostCard.suit.color() != cards[0].suit.color()
     else
-      @faceDownTableaux[tableauIndex].length == 0 and \
+      @faceDownTableauPiles[tableauPileIndex].length == 0 and \
         cards[0].rank.letter() == 'K'
 
   getCollection: (locator) ->
@@ -113,7 +113,7 @@ class App.Models.Klondike
           [card]
         else
           null
-      when 'faceUpTableaux'
+      when 'faceUpTableauPiles'
         collection.slice(collection.indexOf(card))
       else
         null
@@ -131,8 +131,8 @@ class App.Models.Klondike
             dest.push(src.slice(-cmd.numberOfCards)...)
             src.pop() for i in [0...cmd.numberOfCards] # seriously?
           when 'flip'
-            @faceUpTableaux[cmd.tableauIndex].push(@faceDownTableaux[cmd.tableauIndex].pop())
-          when 'turn'
+            @faceUpTableauPiles[cmd.tableauPileIndex].push(@faceDownTableauPiles[cmd.tableauPileIndex].pop())
+          when 'turnStock'
             undoCommand.cardsTurned = 0
             while undoCommand.cardsTurned < @cardsToTurn and @stock.length > 0
               @waste.push(@stock.pop())
@@ -150,8 +150,8 @@ class App.Models.Klondike
             src.push(dest.slice(-cmd.numberOfCards)...)
             dest.pop() for i in [0...cmd.numberOfCards] # seriously?
           when 'flip'
-            @faceDownTableaux[cmd.tableauIndex].push(@faceUpTableaux[cmd.tableauIndex].pop())
-          when 'turn'
+            @faceDownTableauPiles[cmd.tableauPileIndex].push(@faceUpTableauPiles[cmd.tableauPileIndex].pop())
+          when 'turnStock'
             for i in [0...cmd.cardsTurned]
               assert @waste.length
               @stock.push(@waste.pop())
@@ -162,15 +162,15 @@ class App.Models.Klondike
 
   nextAutoCommand: ->
     # If any facedown card can be flipped, flip it now
-    for i in [0...@faceDownTableaux.length]
-      if @faceDownTableaux[i].length > 0 and @faceUpTableaux[i].length == 0
+    for i in [0...@faceDownTableauPiles.length]
+      if @faceDownTableauPiles[i].length > 0 and @faceUpTableauPiles[i].length == 0
         return new App.Models.Command
           action: 'flip'
-          tableauIndex: i
+          tableauPileIndex: i
           initiator: 'auto'
     # Auto-play when obviously won
     if @_isObviouslyWon()
-      candidateLocators = (lo for lo in [['waste'], @locators.faceUpTableaux...] \
+      candidateLocators = (lo for lo in [['waste'], @locators.faceUpTableauPiles...] \
                            when @getCollection(lo).length > 0)
       srcLocator = _(candidateLocators).min (lo) => _(@getCollection(lo)).last().rank.value
       if srcLocator
@@ -186,8 +186,8 @@ class App.Models.Klondike
 
   _isObviouslyWon: ->
     return false if @stock.length > 0 or @waste.length > 1
-    for faceDownTableau in @faceDownTableaux
-      return false if faceDownTableau.length > 0
+    for faceDownTableauPile in @faceDownTableauPiles
+      return false if faceDownTableauPile.length > 0
     true
 
   isWon: ->
@@ -198,7 +198,7 @@ class App.Models.Klondike
   # Consistency checks
 
   _assertStructure: ->
-    for arrayName in ['faceUpTableaux', 'faceDownTableaux', 'stock', 'waste', 'foundations']
+    for arrayName in ['faceUpTableauPiles', 'faceDownTableauPiles', 'stock', 'waste', 'foundations']
       assert this[arrayName] instanceof Array, "#{arrayName} is not an array", this[arrayName]
     for locator in @locators.all
       collection = @getCollection(locator)
@@ -212,7 +212,7 @@ class App.Models.Klondike
         @_assertLocator(cmd.src)
         @_assertLocator(cmd.dest)
         assert cmd.numberOfCards
-        assert cmd.dest[0] == 'faceUpTableaux' if cmd.numberOfCards > 1
+        assert cmd.dest[0] == 'faceUpTableauPiles' if cmd.numberOfCards > 1
 
   _assertLocator: (lo) -> assert(1 <= lo.length <= 2)
 

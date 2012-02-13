@@ -128,10 +128,10 @@ class App.Controllers.Klondike
       waste: {left: firstColumn + columnOffset, top: firstRow}
       wasteFanningOffset: 20
       foundations: ({left: firstColumn + (3 + i) * columnOffset, top: firstRow} for i in [0...@model.numberOfFoundations])
-      tableaux: ({left: firstColumn + i * columnOffset, top: secondRow} for i in [0...@model.numberOfTableaux])
+      tableauPiles: ({left: firstColumn + i * columnOffset, top: secondRow} for i in [0...@model.numberOfTableauPiles])
       tableauFanningOffset: 20
 
-      undoButton: {left: firstColumn + columnOffset * @model.numberOfTableaux, top: firstRow}
+      undoButton: {left: firstColumn + columnOffset * @model.numberOfTableauPiles, top: firstRow}
 
   appendBaseElements: () ->
     baseContainer = document.createElement('div')
@@ -148,8 +148,8 @@ class App.Controllers.Klondike
     makeBaseCardElement('exhaustedImage', 'exhaustedImage', @positions.stock, 5)
     for i in [0...@model.numberOfFoundations]
       makeBaseCardElement('foundationBase', "foundationBase#{i}", @positions.foundations[i])
-    for i in [0...@model.numberOfTableaux]
-      makeBaseCardElement('tableauBase', "tableauBase#{i}", @positions.tableaux[i])
+    for i in [0...@model.numberOfTableauPiles]
+      makeBaseCardElement('tableauPileBase', "tableauPileBase#{i}", @positions.tableauPiles[i])
     $('<div class="button gray undoButton">Undo</div>').css(@positions.undoButton) \
       .appendTo(baseContainer)
     $(@rootElement).append(baseContainer)
@@ -235,13 +235,13 @@ class App.Controllers.Klondike
       zIndex = 1000
       for card in foundation
         @getCardController(card.id).setRestingState @positions.foundations[index], zIndex++, true
-    for i in [0...@model.faceDownTableaux.length]
+    for i in [0...@model.faceDownTableauPiles.length]
       zIndex = 1000
-      pos = _.clone(@positions.tableaux[i])
-      for card in @model.faceDownTableaux[i]
+      pos = _.clone(@positions.tableauPiles[i])
+      for card in @model.faceDownTableauPiles[i]
         @getCardController(card.id).setRestingState pos, zIndex++, false
         pos.top += @positions.tableauFanningOffset
-      for card in @model.faceUpTableaux[i]
+      for card in @model.faceUpTableauPiles[i]
         @getCardController(card.id).setRestingState pos, zIndex++, true
         pos.top += @positions.tableauFanningOffset
 
@@ -275,12 +275,12 @@ class App.Controllers.Klondike
             controller.animateToRestingPosition(@speeds.shift, false)
       when 'flip'
         if cmd.direction == 'do'
-          assert @model.faceUpTableaux[cmd.tableauIndex].length == 1
-          card = @model.faceUpTableaux[cmd.tableauIndex][0]
+          assert @model.faceUpTableauPiles[cmd.tableauPileIndex].length == 1
+          card = @model.faceUpTableauPiles[cmd.tableauPileIndex][0]
         else
-          card = _(@model.faceDownTableaux[cmd.tableauIndex]).last()
+          card = _(@model.faceDownTableauPiles[cmd.tableauPileIndex]).last()
         @getCardController(card).animateToRestingFace(@speeds.flip)
-      when 'turn'
+      when 'turnStock'
         if cmd.direction == 'do'
           turnedCards = @model.waste.slice(-@model.cardsToTurn)
           for controller in @getCardControllers(turnedCards)
@@ -319,7 +319,7 @@ class App.Controllers.Klondike
         else if cmd.guiAction == 'drag' then @speeds.snap.duration / 2
         else @speeds.playToFoundation.duration / 2
       when 'flip' then @speeds.flip.duration / 3
-      when 'turn' then @speeds.turn.duration / 2
+      when 'turnStock' then @speeds.turn.duration / 2
       else 0
 
   removeEventHandlers: ->
@@ -330,14 +330,14 @@ class App.Controllers.Klondike
     @removeEventHandlers()
     # Buttons
     $(@rootElement).on 'click', '.undoButton', @undo
-    # Stock: Click to Turn and redeal
+    # Stock: Click to turn and redeal
     if @model.stock.length
       stockCard = _(@model.stock).last()
       $(@rootElement).on 'click', "##{stockCard.id}", @turnStock
     else if @model.waste.length
       $(@rootElement).on 'click', "#redealImage", @redeal
-    # Tableaux: Doubleclick to play to foundation
-    for locator in [['waste'], (['faceUpTableaux', i] for i in [0...@model.faceUpTableaux.length])...]
+    # Tableau: Doubleclick to play to foundation
+    for locator in [['waste'], (['faceUpTableauPiles', i] for i in [0...@model.faceUpTableauPiles.length])...]
       if topMostCard = _(@model.getCollection(locator)).last()
         do (locator) =>
           $(@rootElement).on 'dblclick', "##{topMostCard.id}", (e) =>
@@ -349,6 +349,7 @@ class App.Controllers.Klondike
             # if we ever disable animations.
             unless locator[0] == 'waste' and $(e.target).is(':animated')
               @playToAnyFoundation(locator)
+    # Everywhere: Drag and drop
     @_registerDragAndDrop()
 
   _registerDragAndDrop: ->
@@ -427,15 +428,15 @@ class App.Controllers.Klondike
       if @model.foundationAccepts(i, cards)
         dropZones.push _({locator: locator}).extend \
           @positions.foundations[i], @sizes.card
-    for locator, i in @model.locators.faceUpTableaux
-      if @model.tableauAccepts(i, cards)
-        tableauLength = @model.faceDownTableaux[i].length + \
-          @model.faceUpTableaux[i].length
-        tableauLength-- if tableauLength # place on topmost card, not on actual drop point
+    for locator, i in @model.locators.faceUpTableauPiles
+      if @model.tableauPileAccepts(i, cards)
+        tableauPileLength = @model.faceDownTableauPiles[i].length + \
+          @model.faceUpTableauPiles[i].length
+        tableauPileLength-- if tableauPileLength # place on topmost card, not on actual drop point
         dropZones.push
           locator: locator
-          top: @positions.tableaux[i].top + tableauLength * @positions.tableauFanningOffset
-          left: @positions.tableaux[i].left
+          top: @positions.tableauPiles[i].top + tableauPileLength * @positions.tableauFanningOffset
+          left: @positions.tableauPiles[i].left
           width: @sizes.card.width
           height: @sizes.card.height
     dropZones
@@ -445,7 +446,7 @@ class App.Controllers.Klondike
     $('<div class="visualization"></div>').css(rect).appendTo(@rootElement)
 
   turnStock: =>
-    @processUserCommand(new App.Models.Command(action: 'turn'))
+    @processUserCommand(new App.Models.Command(action: 'turnStock'))
 
   redeal: =>
     @processUserCommand(new App.Models.Command(action: 'redeal'))
@@ -466,7 +467,7 @@ class App.Controllers.Klondike
   move: (cards, dest) =>
     @model._assertLocator(dest)
     assert cards instanceof Array
-    assert cards.length == 1, dest, cards unless dest[0] == 'faceUpTableaux'
+    assert cards.length == 1, dest, cards unless dest[0] == 'faceUpTableauPiles'
     @processUserCommand new App.Models.Command
       action: 'move'
       src: @model.getLocator(cards[0])
