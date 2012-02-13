@@ -146,7 +146,8 @@ $M = Matrix.create;
 
     // browser supports standard CSS property name
     supportedProp = prop;
-    supports3d = div.style.perspective !== undefined;
+    supports3d = false;
+    supports2d = true;
   } 
   else {
 
@@ -159,12 +160,8 @@ $M = Matrix.create;
         if (prefixes[i] === 'Moz') {
             translationUnit = 'px'
         }
-        if((prefixes[i] + 'Perspective') in div.style) {
-          supports3d = true;
-        }
-        else {
-          supports2d = true;
-        }
+        supports3d = false;
+        supports2d = true;
         break;
       }
     }
