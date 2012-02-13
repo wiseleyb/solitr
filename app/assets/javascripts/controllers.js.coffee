@@ -318,7 +318,8 @@ class App.Controllers.Klondike
         if cmd.direction == 'undo' then @speeds.undoMove.duration / 2
         else if cmd.guiAction == 'drag' then @speeds.snap.duration / 2
         else @speeds.playToFoundation.duration / 2
-      when 'flip' then @speeds.flip.duration / 3
+      when 'flip'
+        @speeds.flip.duration / if cmd.direction == 'do' then 3 else 2
       when 'turnStock' then @speeds.turn.duration / 2
       else 0
 
