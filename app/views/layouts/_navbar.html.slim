@@ -1,0 +1,27 @@
+.navbar.navbar-fixed-top
+  .navbar-inner
+    .container-fluid
+      /! <a class="brand" href="/">Solitr</a>
+      ul.nav
+        li.dropdown
+          a.dropdown-toggle data-toggle="dropdown" href="#"
+            | Select Game
+            b.caret
+          ul.dropdown-menu
+            = active_link_to 'Klondike, turn three (medium)', '/', :wrap_tag => :li, :active => :exclusive
+            = active_link_to 'Klondike, turn one (easy)', '/klondike-turn-one', :wrap_tag => :li
+            /! = active_link_to 'Spider (coming soon)', '/spider-solitaire', :wrap_tag => :li
+        li.dropdown
+          a.dropdown-toggle data-toggle="dropdown" href="#"
+            | Info
+            b.caret
+          ul.dropdown-menu
+            / li
+              a data-toggle="modal" href="#instructions" How to play
+            li
+              a data-toggle="modal" href="#about" About Solitr
+      ul.nav.pull-right
+        li
+          a href="http://www.solitr.com/blog/" Blog
+        li
+          a href="https://github.com/joliss/solitr" GitHub
