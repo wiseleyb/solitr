@@ -39,3 +39,20 @@
     color: @white;
   }
 }
+
+// Non-fixed navbar at top
+.navbar-top {
+  margin-bottom: 0;
+
+  .navbar-inner {
+    padding-left:  0;
+    padding-right: 0;
+    .border-radius(0);
+  }
+
+  // Compensate for item padding to align at 20px
+  .container-fluid {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+}

@@ -15,9 +15,10 @@ body {
 }
 
 #solitaireCanvas {
-  position: absolute; // positioned for z-index of children
-  top: 40px;
-  left: 0px;
+  position: relative; // positioned for z-index of children
+  z-index: 0;
+  top: 0;
+  left: 0;
   bottom: 0;
   right: 0;
   // top: 100px;
@@ -140,7 +141,7 @@ body {
   top: 170px;
   left: 50px;
   width: 580px;
-  z-index: 1000000;
+  z-index: 4000;
   display: none;
   text-align: center;
   @include border-radius(10px);

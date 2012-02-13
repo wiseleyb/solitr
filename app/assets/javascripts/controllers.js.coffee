@@ -3,6 +3,7 @@
 # 1000-1999: resting cards
 # 2000-2999: animated cards
 # 3000-3999: dragging cards
+# 4000-4999: modals
 
 window.App ?= {}
 App.Controllers ?= {}

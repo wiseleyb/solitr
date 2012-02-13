@@ -9,6 +9,5 @@ html
     = render :partial => 'layouts/ga' if Rails.env.production?
   body
     = render :partial => 'layouts/navbar'
-    #pageContent
-      = yield
+    = yield
     = render :partial => 'layouts/about'
