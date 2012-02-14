@@ -1,4 +1,7 @@
 #= require vendor
+#= require jquery
+#= require jquery.ui.mouse
+#= require jquery.effects.core
 #= require jquery_ujs
 #= require twitter/bootstrap/dropdown
 #= require twitter/bootstrap/modal
