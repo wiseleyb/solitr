@@ -14,7 +14,7 @@ module Solitr
           when %r{^/assets/.*-[0-9a-f]{32,}}
             duration = 1.month
           else
-            duration = 0
+            duration = 1.hour
           end
         end
 
