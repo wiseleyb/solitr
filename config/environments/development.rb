@@ -28,6 +28,5 @@ Solitr::Application.configure do
   # Expands the lines which load the assets
   config.assets.debug = true
 
-  # Rails has bitten me before by serving outdated files from public/assets
-  config.serve_static_assets = false
+  config.serve_static_assets = true
 end
