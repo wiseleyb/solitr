@@ -18,8 +18,9 @@ module Solitr
           end
         end
 
+        headers['Date'] = Time.now.httpdate
         if duration
-          headers['Expires'] = (duration == 0 ? '-1' : "#{duration.from_now}")
+          headers['Expires'] = (duration == 0 ? '-1' : (Time.now + duration).httpdate)
           headers['Cache-Control'] = "public, max-age=#{duration.to_i}, must-revalidate"
         else
           headers['Pragma'] = 'no-cache'
