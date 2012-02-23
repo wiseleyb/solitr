@@ -19,6 +19,7 @@ gem 'jquery-rails'
 gem 'jquery-ui-rails'
 gem 'active_link_to'
 gem 'slim'
+gem 'markdown-rails'
 
 gem 'thin'
 

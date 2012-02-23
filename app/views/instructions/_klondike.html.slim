@@ -3,25 +3,6 @@
     a.close data-dismiss="modal" ×
     h3 How To Play Klondike Solitaire
   .modal-body
-    h4 Goal
-    p The goal is to move all cards to the four <b>foundations</b> on the upper
-      right.
-    h4 Turning and Moving
-    p Click the <b>stock</b> (on the upper left) to turn over cards onto the
-      <b>waste pile</b>.
-    p Drag cards to move them between the waste pile, the seven <b>tableau</b>
-      columns (at the bottom), and the four foundations. You can also
-      double-click cards instead of dragging them to a foundation.
-    p You may move single cards or piles of cards within the tableau. You may
-      only move cards <em>off</em> the waste pile, but you may <em>onto</em> and
-      <em>off</em> the foundations.
-    p Any time you expose a face-down card in a tableau column, that
-      card is automatically turned face-up for you.
-    h4 Build Rules
-    p Cards on the foundations need to be stacked by the same suit from Ace to
-      King.
-    p Cards on the tableau need to be stacked by alternating
-      color from high rank (King) to low rank (Ace).
-      Empty spots on the tableau can be filled with a King of any suit.
+    = render :partial => 'instructions/klondike_text'
   .modal-footer
     a.btn data-dismiss="modal" href="#" Close
