@@ -1,3 +1,10 @@
+#= require jquery
+#= require jquery.ui.mouse
+#= require jquery.effects.core
+#= require jquery_ujs
+
+#= require models
+
 # zIndex:
 # 0-999: static base elements
 # 1000-1999: resting cards

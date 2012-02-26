@@ -26,3 +26,7 @@ gem 'thin'
 group :development do
   gem 'vendorer'
 end
+
+group :test, :development do
+  gem 'konacha'
+end

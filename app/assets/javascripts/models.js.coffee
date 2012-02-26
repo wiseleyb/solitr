@@ -1,3 +1,5 @@
+#= require underscore
+
 window.App ?= {}
 App.Models ?= {}
 
