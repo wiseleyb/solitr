@@ -275,7 +275,7 @@ class App.Controllers.Klondike
             controller.animateToRestingPosition(@speeds.shift, false)
       when 'flip'
         if cmd.direction == 'do'
-          assert @model.faceUpTableauPiles[cmd.tableauPileIndex].length == 1
+          _assert @model.faceUpTableauPiles[cmd.tableauPileIndex].length == 1
           card = @model.faceUpTableauPiles[cmd.tableauPileIndex][0]
         else
           card = _(@model.faceDownTableauPiles[cmd.tableauPileIndex]).last()
@@ -455,7 +455,7 @@ class App.Controllers.Klondike
   playToAnyFoundation: (src) =>
     collection = @model.getCollection(src)
     card = _(collection).last()
-    assert card
+    _assert card
     for foundationIndex in [0...@model.foundations.length]
       if @model.foundationAccepts(foundationIndex, [card])
         @processUserCommand new App.Models.Command
@@ -467,8 +467,8 @@ class App.Controllers.Klondike
 
   move: (cards, dest) =>
     @model._assertLocator(dest)
-    assert cards instanceof Array
-    assert cards.length == 1, dest, cards unless dest[0] == 'faceUpTableauPiles'
+    _assert cards instanceof Array
+    _assert cards.length == 1, dest, cards unless dest[0] == 'faceUpTableauPiles'
     @processUserCommand new App.Models.Command
       action: 'move'
       src: @model.getLocator(cards[0])

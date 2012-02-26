@@ -71,7 +71,7 @@ class App.Models.Klondike
       for suit in App.Models.suits).flatten()
 
   foundationAccepts: (foundationIndex, cards) ->
-    assert cards instanceof Array
+    _assert cards instanceof Array
     return false if cards.length != 1
     topMostCard = _(@foundations[foundationIndex]).last()
     if topMostCard?
@@ -81,7 +81,7 @@ class App.Models.Klondike
       cards[0].rank.letter() == 'A'
 
   tableauPileAccepts: (tableauPileIndex, cards) ->
-    assert cards instanceof Array
+    _assert cards instanceof Array
     topMostCard = _(@faceUpTableauPiles[tableauPileIndex]).last()
     if topMostCard
       topMostCard.rank.nextLower() == cards[0].rank and \
@@ -105,7 +105,7 @@ class App.Models.Klondike
   # that would be moved with it. Else, return null.
   movedWithCard: (card) ->
     locator = @getLocator(card)
-    assert(locator?)
+    _assert(locator?)
     collection = @getCollection(locator)
     switch locator[0]
       when 'waste', 'foundations'
@@ -153,7 +153,7 @@ class App.Models.Klondike
             @faceDownTableauPiles[cmd.tableauPileIndex].push(@faceUpTableauPiles[cmd.tableauPileIndex].pop())
           when 'turnStock'
             for i in [0...cmd.cardsTurned]
-              assert @waste.length
+              _assert @waste.length
               @stock.push(@waste.pop())
           when 'redeal'
             while @stock.length
@@ -199,22 +199,22 @@ class App.Models.Klondike
 
   _assertStructure: ->
     for arrayName in ['faceUpTableauPiles', 'faceDownTableauPiles', 'stock', 'waste', 'foundations']
-      assert this[arrayName] instanceof Array, "#{arrayName} is not an array", this[arrayName]
+      _assert this[arrayName] instanceof Array, "#{arrayName} is not an array", this[arrayName]
     for locator in @locators.all
       collection = @getCollection(locator)
-      assert collection, "collection not found", locator
+      _assert collection, "collection not found", locator
       for card in collection
-        assert card instanceof App.Models.Card, "not a Card in collection", card, locator
+        _assert card instanceof App.Models.Card, "not a Card in collection", card, locator
 
   _assertCommand: (cmd) ->
     switch cmd.action
       when 'move'
         @_assertLocator(cmd.src)
         @_assertLocator(cmd.dest)
-        assert cmd.numberOfCards
-        assert cmd.dest[0] == 'faceUpTableauPiles' if cmd.numberOfCards > 1
+        _assert cmd.numberOfCards
+        _assert cmd.dest[0] == 'faceUpTableauPiles' if cmd.numberOfCards > 1
 
-  _assertLocator: (lo) -> assert(1 <= lo.length <= 2)
+  _assertLocator: (lo) -> _assert(1 <= lo.length <= 2)
 
   # Development helpers to load and save game states
 
