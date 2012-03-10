@@ -63,9 +63,6 @@ class App.Models.Klondike
     # @deck = @createDeck() 
     @deck = _(@createDeck()).shuffle()
     
-  hint: ->
-    new App.Models.Klondike.Hint(self)
-    
   deal: ->
     deckCopy = @deck.slice(0)
     for i in [0...@faceDownTableauPiles.length]
