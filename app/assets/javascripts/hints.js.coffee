@@ -24,10 +24,13 @@ class App.Controllers.KlondikeTurnThreeHints extends App.Controllers.Klondike
 class App.Models.KlondikeTurnThreeHints extends App.Models.KlondikeTurnThree
   cardsToTurn: 3
 
+  zeroIndexNumberOfTableauPiles: ->
+    @numberOfTableauPiles - 1
+    
   commandsForInterTableauPiles: ->
     console.log "Check for card plays"
-    for i in [0...@numberOfTableauPiles]
-      for j in [0..@numberOfTableauPiles]
+    for i in [0...@zeroIndexNumberOfTableauPiles()]
+      for j in [0..@zeroIndexNumberOfTableauPiles()]
         console.log "checking #{i},#{j}"
         unless i == j || _.isEmpty(@faceUpTableauPiles[j]) || _.isEmpty(@faceUpTableauPiles[i])
           if @tableauPileAccepts(i,@faceUpTableauPiles[j]) == true
@@ -45,10 +48,10 @@ class App.Models.KlondikeTurnThreeHints extends App.Models.KlondikeTurnThree
     
   commandsForPlayingTableauKingsOnBlanks: ->
     console.log "Check for kings on stacks that can be moved to blank spots"
-    for i in [0...@numberOfTableauPiles]
+    for i in [0...@zeroIndexNumberOfTableauPiles()]
       if _.isEmpty(@faceDownTableauPiles[i]) == false && _.isEmpty(@faceUpTableauPiles[i]) == false && _.first(@faceUpTableauPiles[i]).isKing() == true
         console.log "King on stack #{i}"
-        for j in [0..@numberOfTableauPiles]
+        for j in [0..@zeroIndexNumberOfTableauPiles()]
           if _.isEmpty(@faceDownTableauPiles[j]) && _.isEmpty(@faceUpTableauPiles[j])
             console.log "Blank found on stack #{j}"
             if @tableauPileAccepts(j,@faceUpTableauPiles[i])
@@ -66,7 +69,7 @@ class App.Models.KlondikeTurnThreeHints extends App.Models.KlondikeTurnThree
               
   commandsForMovingTableauCardsToFoundations: ->
     console.log "Check for cards to move up to foundations"
-    for i in [0...@numberOfTableauPiles]
+    for i in [0...@zeroIndexNumberOfTableauPiles()]
       unless _.isEmpty(@faceUpTableauPiles[i])
         for j in [0..3]
           console.log "#{i}, #{j}"
@@ -87,7 +90,7 @@ class App.Models.KlondikeTurnThreeHints extends App.Models.KlondikeTurnThree
     unless _.isEmpty(@waste)
       console.log "Check if we can play waste on faceUpTableauPiles"
       unless _.isEmpty(@waste)
-        for i in [0...@numberOfTableauPiles]
+        for i in [0...@zeroIndexNumberOfTableauPiles()]
           console.log "checking #{i},waste"
           unless _.isEmpty(@faceUpTableauPiles[i])
             if @tableauPileAccepts(i,[_.last(@waste)]) == true
@@ -126,7 +129,7 @@ class App.Models.KlondikeTurnThreeHints extends App.Models.KlondikeTurnThree
     unless _.isEmpty(@waste)
       console.log "Check for kings on waste that can be moved to blank spots"
       if _.last(@waste).isKing() == true
-        for i in [0...@numberOfTableauPiles]
+        for i in [0...@zeroIndexNumberOfTableauPiles()]
           if _.isEmpty(@faceDownTableauPiles[i]) == true && _.isEmpty(@faceUpTableauPiles[i]) == true
             console.log "Blank found on stack #{i}"
             if @tableauPileAccepts(i,[_.last(@waste)])
