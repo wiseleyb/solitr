@@ -60,8 +60,8 @@ class App.Models.Klondike
       @locators.faceDownTableauPiles..., @locators.faceUpTableauPiles...]
 
     # for consistent cards and a solveable solution use
-    # @deck = @createDeck() 
-    @deck = _(@createDeck()).shuffle()
+    @deck = @createDeck() 
+    # @deck = _(@createDeck()).shuffle()
     
   deal: ->
     deckCopy = @deck.slice(0)
