@@ -59,7 +59,9 @@ class App.Models.Klondike
     @locators.all = [['stock'], ['waste'], @locators.foundations...,
       @locators.faceDownTableauPiles..., @locators.faceUpTableauPiles...]
 
-    @deck = @createDeck() #_(@createDeck()).shuffle()
+    # for consistent cards and a solveable solution use
+    # @deck = @createDeck() 
+    @deck = _(@createDeck()).shuffle()
     
   hint: ->
     new App.Models.Klondike.Hint(self)
