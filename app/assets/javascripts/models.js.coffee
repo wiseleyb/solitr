@@ -32,6 +32,9 @@ _nextId = 0
 class App.Models.Card
   constructor: (@rank, @suit) ->
     @id = "id#{_nextId++}"
+    
+  isKing: ->
+    return @rank.value == 12 
 
 class App.Models.Klondike
   cardsToTurn: null # override in subclass
@@ -56,8 +59,11 @@ class App.Models.Klondike
     @locators.all = [['stock'], ['waste'], @locators.foundations...,
       @locators.faceDownTableauPiles..., @locators.faceUpTableauPiles...]
 
-    @deck = _(@createDeck()).shuffle()
-
+    @deck = @createDeck() #_(@createDeck()).shuffle()
+    
+  hint: ->
+    new App.Models.Klondike.Hint(self)
+    
   deal: ->
     deckCopy = @deck.slice(0)
     for i in [0...@faceDownTableauPiles.length]
@@ -185,7 +191,7 @@ class App.Models.Klondike
               numberOfCards: 1
               initiator: 'auto'
     null
-
+    
   _isObviouslyWon: ->
     return false if @stock.length > 0 or @waste.length > 1
     for faceDownTableauPile in @faceDownTableauPiles

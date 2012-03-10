@@ -125,24 +125,27 @@ class App.Controllers.Klondike
     @sizes =
       card: App.Controllers.Card.prototype.size
       button: {width: App.Controllers.Card.prototype.size.width, height: App.Controllers.Card.prototype.size.height / 3}
-    firstColumn = 20
-    columnOffset = @sizes.card.width + 20
-    firstRow = 20
-    secondRow = 180
+    @geometry =
+      firstColumn: 20
+      columnOffset: @sizes.card.width + 20
+      firstRow: 20
+      secondRow: 180
     @positions =
       undealtCards: {left: 0, top: 0}
-      stock: {left: firstColumn, top: firstRow}
-      waste: {left: firstColumn + columnOffset, top: firstRow}
+      stock: {left: @geometry.firstColumn, top: @geometry.firstRow}
+      waste: {left: @geometry.firstColumn + @geometry.columnOffset, top: @geometry.firstRow}
       wasteFanningOffset: 20
-      foundations: ({left: firstColumn + (3 + i) * columnOffset, top: firstRow} for i in [0...@model.numberOfFoundations])
-      tableauPiles: ({left: firstColumn + i * columnOffset, top: secondRow} for i in [0...@model.numberOfTableauPiles])
+      foundations: ({left: @geometry.firstColumn + (3 + i) * @geometry.columnOffset, top: @geometry.firstRow} for i in [0...@model.numberOfFoundations])
+      tableauPiles: ({left: @geometry.firstColumn + i * @geometry.columnOffset, top: @geometry.secondRow} for i in [0...@model.numberOfTableauPiles])
       tableauFanningOffset: 20
 
-      undoButton: {left: firstColumn + columnOffset * @model.numberOfTableauPiles, top: firstRow}
+      undoButton: {left: @geometry.firstColumn + @geometry.columnOffset * @model.numberOfTableauPiles, top: @geometry.firstRow}
+      # hintButton: {left: firstColumn + columnOffset * @model.numberOfTableauPiles, top: firstRow + 60}
+      # runButton: {left: firstColumn + columnOffset * @model.numberOfTableauPiles, top: firstRow + 120}
 
   appendBaseElements: () ->
-    baseContainer = document.createElement('div')
-    baseContainer.className = 'baseContainer'
+    @baseContainer = document.createElement('div')
+    @baseContainer.className = 'baseContainer'
     makeBaseCardElement = (className, id, position, spriteOffset=3) =>
       e = document.createElement('div')
       e.className = "#{className} baseCardElement"
@@ -150,7 +153,7 @@ class App.Controllers.Klondike
       e.style.cssText = "left: #{position.left}px; top: #{position.top}px;" + \
         "width: #{@sizes.card.width}px; height: #{@sizes.card.height}px;" + \
         "background-position: -#{spriteOffset * @sizes.card.width}px -#{4 * @sizes.card.height}px;"
-      $(baseContainer).append(e)
+      $(@baseContainer).append(e)
     makeBaseCardElement('redealImage', 'redealImage', @positions.stock, 4)
     makeBaseCardElement('exhaustedImage', 'exhaustedImage', @positions.stock, 5)
     for i in [0...@model.numberOfFoundations]
@@ -158,8 +161,9 @@ class App.Controllers.Klondike
     for i in [0...@model.numberOfTableauPiles]
       makeBaseCardElement('tableauPileBase', "tableauPileBase#{i}", @positions.tableauPiles[i])
     $('<div class="button gray undoButton">Undo</div>').css(@positions.undoButton) \
-      .appendTo(baseContainer)
-    $(@rootElement).append(baseContainer)
+      .appendTo(@baseContainer)
+
+    $(@rootElement).append(@baseContainer)
 
     overlayContainer = document.createElement('div')
     overlayContainer.className = 'overlayContainer'
@@ -213,6 +217,7 @@ class App.Controllers.Klondike
     commandList = _(@model.undoStack).last()
     @removeEventHandlers()
     cmd = commandList.pop()
+    App.last_undo_cmd = cmd
     @processCommand(cmd)
     if commandList.length
       # More commands in the current command list. Continue after delay.
@@ -222,7 +227,7 @@ class App.Controllers.Klondike
       # control to player.
       @model.undoStack.pop()
       @registerEventHandlers()
-
+        
   # Update GUI after the model has been updated according to cmd
   renderAfterCommand: (cmd) ->
     @updateRestingStates()
