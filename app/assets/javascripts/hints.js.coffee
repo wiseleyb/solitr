@@ -5,11 +5,17 @@ class App.Controllers.KlondikeTurnThreeHints extends App.Controllers.Klondike
     super
     @positions.hintButton = {left: @geometry.firstColumn +  @geometry.columnOffset * @model.numberOfTableauPiles, top:  @geometry.firstRow + 60}
     # @positions.runButton = {left:  @geometry.firstColumn +  @geometry.columnOffset * @model.numberOfTableauPiles, top:  @geometry.firstRow + 120}
-    $('<div class="button gray hintButton">Hint</div>').css(@positions.hintButton) \
+    $('#hint_button').remove()
+    $('#score').remove()
+    $('#moves').remove()
+    
+    $('<div id="hint_button" class="button gray hintButton">Hint</div>').css(@positions.hintButton) \
       .appendTo(@baseContainer)
     # $('<div class="button gray runButton">Run</div>').css(@positions.runButton) \
     #   .appendTo(@baseContainer)
     $('<div id="score" class="score">Score: 0</div>').css({left: @geometry.firstColumn +  @geometry.columnOffset * @model.numberOfTableauPiles, top:  @geometry.firstRow + 180}) \
+      .appendTo(@baseContainer)
+    $('<div id="moves" class="moves">Moves: 0</div>').css({left: @geometry.firstColumn +  @geometry.columnOffset * @model.numberOfTableauPiles, top:  @geometry.firstRow + 240}) \
       .appendTo(@baseContainer)
       
   registerEventHandlers: ->
@@ -27,15 +33,19 @@ class App.Controllers.KlondikeTurnThreeHints extends App.Controllers.Klondike
 class App.Models.KlondikeTurnThreeHints extends App.Models.KlondikeTurnThree
   cardsToTurn: 3
   score: 0
+  moves: 0
   
   zeroIndexNumberOfTableauPiles: ->
     @numberOfTableauPiles 
+  
+  cloneCards: (cards) ->
+    _.map cards, (card) -> card.deepClone()
     
   commandsForInterTableauPilePlay: ->
     console.log "commandsForInterTableauPiles"
     for i in [0...@zeroIndexNumberOfTableauPiles()]
       for j in [0..@zeroIndexNumberOfTableauPiles()-1]
-        console.log "checking #{i},#{j}"
+        # console.log "checking #{i},#{j}"
         unless i == j || _.isEmpty(@faceUpTableauPiles[j]) || _.isEmpty(@faceUpTableauPiles[i])
           if @tableauPileAccepts(i,@faceUpTableauPiles[j]) == true
             console.log "moving #{i},#{j}"
@@ -47,6 +57,7 @@ class App.Models.KlondikeTurnThreeHints extends App.Models.KlondikeTurnThree
                   src: ["faceUpTableauPiles",j]
                   dest: ["faceUpTableauPiles",i]
                   numberOfCards: @faceUpTableauPiles[j].length
+                  cards: @cloneCards(@faceUpTableauPiles[j])
                   guiAction: "drag"
                   initiator: "user"
                 ]
@@ -58,7 +69,7 @@ class App.Models.KlondikeTurnThreeHints extends App.Models.KlondikeTurnThree
       if _.isEmpty(@faceDownTableauPiles[i]) == false && _.isEmpty(@faceUpTableauPiles[i]) == false && _.first(@faceUpTableauPiles[i]).isKing() == true
         console.log "King on stack #{i}"
         for j in [0..@zeroIndexNumberOfTableauPiles()-1]
-          console.log "checking #{i},#{j}"
+          # console.log "checking #{i},#{j}"
           if _.isEmpty(@faceDownTableauPiles[j]) && _.isEmpty(@faceUpTableauPiles[j])
             console.log "Blank found on stack #{j}"
             if @tableauPileAccepts(j,@faceUpTableauPiles[i])
@@ -71,6 +82,7 @@ class App.Models.KlondikeTurnThreeHints extends App.Models.KlondikeTurnThree
                     src: ["faceUpTableauPiles",i]
                     dest: ["faceUpTableauPiles",j]
                     numberOfCards: @faceUpTableauPiles[i].length
+                    cards: @cloneCards(@faceUpTableauPiles[i])
                     guiAction: "drag"
                     initiator: "user"
                   ]
@@ -79,10 +91,8 @@ class App.Models.KlondikeTurnThreeHints extends App.Models.KlondikeTurnThree
   commandsForMovingTableauCardsToFoundations: ->
     console.log "commandsForMovingTableauCardsToFoundations"
     for i in [0...@zeroIndexNumberOfTableauPiles()]
-      console.log "#{i}"
       unless _.isEmpty(@faceUpTableauPiles[i])
         for j in [0..3]
-          console.log "#{i}, #{j}"
           if @foundationAccepts(j,[_.last(@faceUpTableauPiles[i])])
             console.log "moving to foundation #{i},#{j}"
             @cmds.push {
@@ -93,6 +103,7 @@ class App.Models.KlondikeTurnThreeHints extends App.Models.KlondikeTurnThree
                   src: ["faceUpTableauPiles",i]
                   dest: ["foundations",j]
                   numberOfCards: 1
+                  cards: @cloneCards([_.last(@faceUpTableauPiles[i])])
                   guiAction: "drag"
                   initiator: "user"
                 ]
@@ -103,7 +114,7 @@ class App.Models.KlondikeTurnThreeHints extends App.Models.KlondikeTurnThree
       console.log "commandsForPlayingWasteOnTableauPiles"
       unless _.isEmpty(@waste)
         for i in [0...@zeroIndexNumberOfTableauPiles()]
-          console.log "checking #{i},waste"
+          # console.log "checking #{i},waste"
           unless _.isEmpty(@faceUpTableauPiles[i])
             if @tableauPileAccepts(i,[_.last(@waste)]) == true
               console.log "moving waste,#{i}"
@@ -115,6 +126,7 @@ class App.Models.KlondikeTurnThreeHints extends App.Models.KlondikeTurnThree
                     src: ["waste"]
                     dest: ["faceUpTableauPiles",i]
                     numberOfCards: 1
+                    cards: @cloneCards([_.last(@waste)])
                     guiAction: "drag"
                     initiator: "user"
                   ]
@@ -125,7 +137,6 @@ class App.Models.KlondikeTurnThreeHints extends App.Models.KlondikeTurnThree
       console.log "Check if we can play waste on foundations"
       unless _.isEmpty(@waste)
         for j in [0..3]
-          console.log "#{j}"
           if @foundationAccepts(j,[_.last(@waste)])
             console.log "moving waste to foundation #{j}"
             @cmds.push {
@@ -136,6 +147,7 @@ class App.Models.KlondikeTurnThreeHints extends App.Models.KlondikeTurnThree
                   src: ["waste"]
                   dest: ["foundations",j]
                   numberOfCards: 1
+                  cards: @cloneCards([_.last(@waste)])
                   guiAction: "drag"
                   initiator: "user"
                 ]
@@ -157,6 +169,7 @@ class App.Models.KlondikeTurnThreeHints extends App.Models.KlondikeTurnThree
                     src: ["waste"]
                     dest: ["faceUpTableauPiles",i]
                     numberOfCards: 1
+                    cards: @cloneCards([_.last(@waste)])
                     guiAction: "drag"
                     initiator: "user"
                   ]
@@ -165,11 +178,11 @@ class App.Models.KlondikeTurnThreeHints extends App.Models.KlondikeTurnThree
   commandsForPlayingFoundationToTableauPiles: ->
     console.log "commandsForPlayingFoundationToTableauPiles"
     for i in [0...@zeroIndexNumberOfTableauPiles()]
-      console.log "#{i}"
       unless _.isEmpty(@faceUpTableauPiles[i])
         for j in [0..3]
-          console.log "#{i}, #{j}"
-          unless _.isEmpty(@foundations[j])
+          # console.log "#{i}, #{j}"
+          unless _.isEmpty(@foundations[j]) || \
+              (!_.isEmpty(@foundations[j]) && _.last(@foundations[j]).rank.value < 2)  # don't play aces or 2s
             if @tableauPileAccepts(i,[_.last(@foundations[j])])
               console.log "moving foundation #{j} to tableau #{i}"
               @cmds.push {
@@ -177,9 +190,10 @@ class App.Models.KlondikeTurnThreeHints extends App.Models.KlondikeTurnThree
                 commands: [
                   new App.Models.Command
                     action: 'move'
-                    dest: ["faceUpTableauPiles",i]
                     src: ["foundations",j]
+                    dest: ["faceUpTableauPiles",i]
                     numberOfCards: 1
+                    cards: @cloneCards([_.last(@foundations[j])])
                     guiAction: "drag"
                     initiator: "user"
                   ]
@@ -209,34 +223,197 @@ class App.Models.KlondikeTurnThreeHints extends App.Models.KlondikeTurnThree
             initiator: "user"
           ]
         }
-          
-  nextHintCommand: ->
+        
+  possibleCommands: ->
     console.log "Starting nextHintCommand run"
     @cmds = []
     methods = ['commandsForInterTableauPilePlay',
       'commandsForPlayingTableauKingsOnBlanks',
       'commandsForMovingTableauCardsToFoundations',
-      'commandsForMovingTableauCardsToFoundations',
       'commandsForPlayingWasteOnTableauPiles',
       'commandsForPlayingWasteOnFoundations',
       'commandsForPlayingKingsOnWasteOnTableauPiles',
-      # 'commandsForPlayingFoundationToTableauPiles',
+      'commandsForPlayingFoundationToTableauPiles',
       'commandsForRedealing',
       'commandsForTurningStock']
     for method in methods
       eval("this.#{method}()")
+    App.possible_commands = @cmds
+    return @cmds
     
+  nextHintCommand: ->
+    console.log "------------------------------------------------------------------------"
+    @possibleCommands()
+    console.log "Possible Commands"
+    @consoleHintCommands(@cmds)
+
+    console.log "History"
+    @consoleLastCommand(2)
+    
+    @processRules()
+    console.log "After Rules"
+    @consoleHintCommands(@cmds)
+
     @cmds = @scoreCmds(@cmds)
     # console.log _.groupBy(@cmds, 'method')
     App.hint_results = @cmds
     return _.first(@cmds).commands unless _.isEmpty(@cmds)
     null   # no move found
 
+  processRules: ->
+    rules = ['ruleAlwaysPlayAceOrTwoToFoundations',
+      'ruleDontUndoLastAction',
+      'ruleDontRepeatLastAction',
+      'rulePlayWasteBeforeFoundation',
+      'ruleTurnStockBeforePlayingFromFoundation',
+      'ruleTurnStockBeforePlayingToFoundation']
+    for rule in rules
+      res = eval("this.#{rule}()")
+      console.log "Rule #{rule}: #{res}"
+      break if res
+    
+  ruleDontUndoLastAction: ->
+    console.log "Processing ruleDontUndoLastAction"
+    removals = []
+    unless _.isEmpty(@undoStack)
+      lastCommands = _.last(@undoStack)
+      return if @commandsContain(lastCommands, ["turnStock", "redeal"])
+      for obj, i in @cmds
+        for cmd in obj.commands
+          for lcmd in lastCommands
+            if @commandName(cmd) == @commandName(lcmd, true)
+              removals.push(i)
+              break
+      for i in removals
+        console.log "Removing #{i}"
+        @cmds.splice(i,1)
+    return true unless _.isEmpty(removals)
+    return false
+
+  ruleDontRepeatLastAction: ->
+    console.log "Processing ruleDontRepeatLastAction"
+    removals = []
+    unless _.isEmpty(@undoStack)
+      lastCommands = _.last(@undoStack)
+      return if @commandsContain(lastCommands, ["turnStock", "redeal"])
+      for obj, i in @cmds
+        for cmd in obj.commands
+          for lcmd in lastCommands
+            if @commandName(cmd) == @commandName(lcmd)
+              removals.push(i)
+              break
+      for i in removals
+        console.log "Removing #{i}"
+        @cmds.splice(i,1)
+    return true unless _.isEmpty(removals)
+    return false
+  
+  rulePlayWasteBeforeFoundation: ->
+    console.log "Processing rulePlayWasteBeforeFoundation"
+    for obj, i in @cmds
+      for cmd in obj.commands
+        if cmd.src? && cmd.src[0] == "waste"
+          console.log "..waste found"
+          @moveCommandToFirst(i)
+          return true
+    return false
+  
+  ruleTurnStockBeforePlayingFromFoundation: (ret = false) ->
+    console.log "Processing ruleTurnStockBeforePlayingFromFoundation"
+    if !_.isEmpty(@cmds) && !_.isEmpty(@stock) && \
+        @cmds[0].commands[0].src? && \
+        @cmds[0].commands[0].src[0] == 'foundations'
+      @cmds.splice(0,1)
+      @ruleTurnStockBeforePlayingFromFoundation(true)
+    return ret
+
+  ruleTurnStockBeforePlayingToFoundation: (ret = false)->
+    console.log "Processing ruleTurnStockBeforePlayingToFoundation"
+    if !_.isEmpty(@cmds) && !_.isEmpty(@stock) && \
+        @cmds[0].commands[0].dest? && \
+        @cmds[0].commands[0].dest[0] == 'foundations'
+      @cmds.splice(0,1)
+      @ruleTurnStockBeforePlayingToFoundation(true)
+    return ret
+    
+  ruleAlwaysPlayAceOrTwoToFoundations: ->
+    console.log "Processing ruleAlwaysPlayAceOrTwoToFoundations"
+    # if a cmd exists that plays an ace or a two to foundation - delete everything infront of it
+    for obj, i in @cmds
+      for cmd in obj.commands
+        if cmd.src? && cmd.src[0] == 'faceUpTableauPiles' && \
+            _.last(@faceUpTableauPiles[cmd.src[1]]).rank.value < 2 && \
+            cmd.dest? && cmd.dest[0] == 'foundations'
+          console.log "..moving #{i} to front of commands"
+          @moveCommandToFirst(i)
+          return true
+    return false
+  
+  moveCommandToFirst: (index) ->
+    cmd = @cmds.splice(index,1)
+    tmp = _.flatten([cmd,@cmds])
+    @cmds = tmp
+    
+  commandsContain: (commands, actions) ->
+    for cmd in commands
+      for action in actions
+        return true if cmd.action == action
+    return false
+    
+  commandsAreReverseOfEachOther: (cmd1, cmd2) ->
+    return false unless cmd1.action == cmd2.action
+    return false if cmd1.action == "redeal" || cmd1.action == "turnStock" || cmd2.action == "redeal" || cmd2.action == "turnStock"
+    if cmd1.dest.length == cmd2.src.length && cmd1.src.length == cmd2.dest.length
+      for idx in [0..cmd1.dest.length]
+        return false unless cmd1.dest[idx] == cmd2.src[idx]
+      for idx in [0..cmd1.src.length]
+        return false unless cmd1.src[idx] == cmd2.dest[idx]
+    else 
+      return false
+    return true
+
+  commandName: (cmd, reverse=false) ->
+    res = [cmd.action]
+    if reverse
+      res.push("src:#{cmd.dest.join('-')}") if cmd.dest?
+      res.push("dest:#{cmd.src.join('-')}") if cmd.src?
+    else
+      res.push("src:#{cmd.src.join('-')}") if cmd.src?
+      res.push("dest:#{cmd.dest.join('-')}") if cmd.dest?
+    res.push("cards:#{cmd.numberOfCards}") if cmd.numberOfCards?
+    # assumes card was deepCloned
+    if cmd.cards?
+      for card in cmd.cards
+        res.push(card.display)
+        
+    return res.join(" ")
+
+  consoleHintCommands: (cmds) ->
+    if _.isEmpty(cmds)
+      console.log "Empty"
+    else
+      for obj in cmds
+        for cmd in obj.commands
+          console.log ">> #{@commandName(cmd)}"
+        
+  consoleLastCommand: (iCount=1) ->
+    if _.isEmpty(@undoStack)
+      console.log "Empty"
+    else
+      iEnd = @undoStack.length
+      iStart = @undoStack.length - iCount
+      iStart = iEnd if iStart < iEnd
+      for i in [iStart..iEnd]
+        for cmd in @undoStack[i-1]
+          console.log "<< last: #{@commandName(cmd)}"
+
   executeCommand: (cmd) ->
     super
     @score += @scoreCmd(cmd)
+    @moves += 1
     $('#score').text("Score: #{@score}")
-
+    $('#moves').text("Moves: #{@moves}")
+    
   scoreCmds: (cmds) ->
     for cmd,i in cmds
       cmds[i]['score'] = 0

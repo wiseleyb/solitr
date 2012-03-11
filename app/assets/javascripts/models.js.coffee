@@ -32,9 +32,23 @@ _nextId = 0
 class App.Models.Card
   constructor: (@rank, @suit) ->
     @id = "id#{_nextId++}"
-    
+
   isKing: ->
     return @rank.value == 12 
+
+  display: ->
+    "#{@rank.letter()}#{@suit.letter()}"
+  
+  deepClone: ->
+    res = JSON.parse(JSON.stringify(this))
+    res.rank.letter = this.rank.letter()
+    res.rank.nextLower = this.rank.nextLower()
+    res.rank.nextHigher = this.rank.nextHigher()
+    res.suit.letter = this.suit.letter()
+    res.suit.color = this.suit.color()
+    res.isKing = this.isKing()
+    res.display = this.display()
+    return res
 
 class App.Models.Klondike
   cardsToTurn: null # override in subclass
