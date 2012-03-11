@@ -221,7 +221,7 @@ class App.Controllers.Klondike
     @processCommand(cmd)
     if commandList.length
       # More commands in the current command list. Continue after delay.
-      setTimeout @undo, @nextAnimationDelay(cmd)
+      window.timers.push(setTimeout @undo, @nextAnimationDelay(cmd))
     else
       # We're done. Pop the empty command list from the undo stack and return
       # control to player.

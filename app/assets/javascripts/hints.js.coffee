@@ -1,27 +1,29 @@
+
 class App.Controllers.KlondikeTurnThreeHints extends App.Controllers.Klondike
   createModel: -> new App.Models.KlondikeTurnThreeHints
       
   appendBaseElements: () ->
     super
     @positions.hintButton = {left: @geometry.firstColumn +  @geometry.columnOffset * @model.numberOfTableauPiles, top:  @geometry.firstRow + 60}
-    # @positions.runButton = {left:  @geometry.firstColumn +  @geometry.columnOffset * @model.numberOfTableauPiles, top:  @geometry.firstRow + 120}
+    @positions.runButton = {left:  @geometry.firstColumn +  @geometry.columnOffset * @model.numberOfTableauPiles, top:  @geometry.firstRow + 120}
     $('#hint_button').remove()
     $('#score').remove()
     $('#moves').remove()
+    $('#run_button').remove()
     
     $('<div id="hint_button" class="button gray hintButton">Hint</div>').css(@positions.hintButton) \
       .appendTo(@baseContainer)
-    # $('<div class="button gray runButton">Run</div>').css(@positions.runButton) \
-    #   .appendTo(@baseContainer)
+    $('<div id="run_button" class="button gray runButton">Run</div>').css(@positions.runButton) \
+      .appendTo(@baseContainer)
     $('<div id="score" class="score">Score: 0</div>').css({left: @geometry.firstColumn +  @geometry.columnOffset * @model.numberOfTableauPiles, top:  @geometry.firstRow + 180}) \
       .appendTo(@baseContainer)
-    $('<div id="moves" class="moves">Moves: 0</div>').css({left: @geometry.firstColumn +  @geometry.columnOffset * @model.numberOfTableauPiles, top:  @geometry.firstRow + 240}) \
+    $('<div id="moves" class="moves">Moves: 0</div>').css({left: @geometry.firstColumn +  @geometry.columnOffset * @model.numberOfTableauPiles, top:  @geometry.firstRow + 210}) \
       .appendTo(@baseContainer)
-      
+    
   registerEventHandlers: ->
     super
     $(@rootElement).on 'click', '.hintButton', @hint
-    # $(@rootElement).on 'click', '.runButton',  @run
+    $(@rootElement).on 'click', '.runButton',  @run
 
   hint: =>
     if nextHintCmd = @model.nextHintCommand()
@@ -29,7 +31,42 @@ class App.Controllers.KlondikeTurnThreeHints extends App.Controllers.Klondike
         @processUserCommand(cmd)
     else
       alert('No more hints')
+    
+  run: =>
+    console.log $('#run_button').html()
+    if $('#run_button').html() == 'Run'
+      console.log "Button: Run"
+      window.timer.poll()
+      $('#run_button').text('Pause')
+      return
+    
+    if $('#run_button').html() == "Pause"
+      console.log "Button: Pause"
+      window.timer.pause()
+      $('#run_button').text('Continue')
+      return
+      
+    if $('#run_button').html() == "Continue"
+      console.log "Button: Continue"
+      window.timer.unpause()
+      $('#run_button').text('Pause')
+      return
 
+  processUserCommand: (cmd) ->
+    window.timer.pause()
+    for t in window.timers
+      clearTimeout(t)
+    @removeEventHandlers()
+    @processCommand(cmd)
+    if nextCmd = @model.nextAutoCommand()
+      window.timers.push(setTimeout (=> @processUserCommand(nextCmd)), @nextAnimationDelay(cmd))
+      window.timer.unpause()
+    else if @model.isWon()
+      window.timers.push(setTimeout @youWin, @nextAnimationDelay(cmd))
+    else
+      @registerEventHandlers()
+      window.timer.unpause()
+                
 class App.Models.KlondikeTurnThreeHints extends App.Models.KlondikeTurnThree
   cardsToTurn: 3
   score: 0
@@ -452,5 +489,5 @@ class App.Models.KlondikeTurnThreeHints extends App.Models.KlondikeTurnThree
         score += 10 if dest == 'foundations'
         score += 5 unless _.isEmpty(@faceDownTableauPiles[src_index])
       if src == "foundations"
-        score += -15 if dest == "faceUpTableauPile"
+        score += -15 if dest == "faceUpTableauPiles"
     return score
