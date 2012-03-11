@@ -75,8 +75,8 @@ class App.Models.Klondike
 
     # for consistent cards and a solveable solution use
     # currently solves in 148 moves
-    @deck = @createDeck() 
-    # @deck = _(@createDeck()).shuffle()
+    # @deck = @createDeck() 
+    @deck = _(@createDeck()).shuffle()
     
   deal: ->
     deckCopy = @deck.slice(0)

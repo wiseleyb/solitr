@@ -56,6 +56,10 @@ class App.Controllers.KlondikeTurnThreeHints extends App.Controllers.Klondike
     window.timer.pause()
     for t in window.timers
       clearTimeout(t)
+    if @model.moves > 200
+      alert('Game halted - too many moves')
+      return
+      
     @removeEventHandlers()
     @processCommand(cmd)
     if nextCmd = @model.nextAutoCommand()
@@ -450,7 +454,7 @@ class App.Models.KlondikeTurnThreeHints extends App.Models.KlondikeTurnThree
     @moves += 1
     $('#score').text("Score: #{@score}")
     $('#moves').text("Moves: #{@moves}")
-    
+      
   scoreCmds: (cmds) ->
     for cmd,i in cmds
       cmds[i]['score'] = 0
