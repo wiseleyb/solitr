@@ -74,8 +74,9 @@ class App.Models.Klondike
       @locators.faceDownTableauPiles..., @locators.faceUpTableauPiles...]
 
     # for consistent cards and a solveable solution use
-    @deck = @createDeck() 
-    # @deck = _(@createDeck()).shuffle()
+    # currently solves in 148 moves
+    # @deck = @createDeck() 
+    @deck = _(@createDeck()).shuffle()
     
   deal: ->
     deckCopy = @deck.slice(0)
